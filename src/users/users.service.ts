@@ -4,6 +4,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 @Injectable()
 export class UsersService {
@@ -25,12 +26,28 @@ export class UsersService {
     }
   }
 
-  async findAll() {
+  async findAll(paginationDto: PaginationDto) {
+
+    const { limit, page } = paginationDto;
+    console.log(paginationDto)
+    if (page <= 0) {
+      throw new BadRequestException("El parametro page debe ser mayor a 0");
+    }
+
+    const numberOfUsers = await this.prisma.user.count();
     const users = await this.prisma.user.findMany({
       omit: { password: true },
+      take: 10,
+      skip: limit * (page - 1),
     });
 
-    return users;
+    return {
+      limit, 
+      page,
+      numberOfPages: Math.ceil(numberOfUsers / limit),
+      count: numberOfUsers,
+      data: users
+    };
   }
 
   async findOne(id: string) {
