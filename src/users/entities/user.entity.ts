@@ -6,4 +6,5 @@ export class User {
   role: "student" | "admin" | "worker";
   code: string;
   registrationDate: Date;
+  password: string;
 }
