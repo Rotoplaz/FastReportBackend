@@ -18,7 +18,7 @@ export class CreateUserDto {
     email: string;
 
     @IsString({ message: 'El rol debe ser una cadena de texto.' })
-    @IsEnum(UserRole, { message: 'El rol debe ser uno de los siguientes valores: admin, student, worker.' })
+    @IsEnum(UserRole, { message: 'El rol debe ser uno de los siguientes valores: admin, student, worker, supervisor.' })
     role: UserRole;
 
     @IsString({ message: 'El código debe ser una cadena de texto.' })
