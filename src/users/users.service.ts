@@ -29,7 +29,7 @@ export class UsersService {
   async findAll(paginationDto: PaginationDto) {
 
     const { limit, page } = paginationDto;
-    console.log(paginationDto)
+    
     if (page <= 0) {
       throw new BadRequestException("El parametro page debe ser mayor a 0");
     }
