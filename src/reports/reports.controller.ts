@@ -25,7 +25,6 @@ export class ReportsController {
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateReportDto: UpdateReportDto) {
-    
     return this.reportsService.update(id, updateReportDto);
   }
 
