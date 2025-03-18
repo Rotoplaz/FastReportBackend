@@ -21,24 +21,53 @@ enum UserRole {
 }
 
 model User {
-  id        String     @id @default(uuid())
+  id        String    @id @default(uuid())
   firstName String
   lastName  String
-  email     String     @unique
-  code      String     @unique
+  email     String    @unique
+  code      String    @unique
   password  String
   role      UserRole
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   Category  Category?
+  Report    Report[]
 }
 
 model Category {
-  id           String @id @default(uuid())
-  name         String @unique
+  id           String   @id @default(uuid())
+  name         String   @unique
   description  String
-  supervisor   User   @relation(fields: [supervisorId], references: [id])
-  supervisorId String @unique
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  supervisor   User     @relation(fields: [supervisorId], references: [id])
+  supervisorId String   @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  Report       Report[]
+}
+
+enum Priority {
+  low
+  medium
+  high
+}
+
+enum Status {
+  pending
+  in_progress
+  completed
+}
+
+model Report {
+  id          String   @id @default(uuid())
+  student     User     @relation(fields: [studentId], references: [id])
+  category    Category @relation(fields: [categoryId], references: [id])
+  categoryId  String
+  studentId   String
+  title       String
+  description String
+  priority    Priority
+  status      Status
+  location    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
