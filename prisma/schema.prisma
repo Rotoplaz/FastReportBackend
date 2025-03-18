@@ -21,13 +21,24 @@ enum UserRole {
 }
 
 model User {
-  id    String @id @default(uuid())
+  id        String     @id @default(uuid())
   firstName String
-  lastName String
-  email String  @unique
-  code      String @unique  
-  password  String   
-  role UserRole
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  lastName  String
+  email     String     @unique
+  code      String     @unique
+  password  String
+  role      UserRole
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  Category  Category?
+}
+
+model Category {
+  id           String @id @default(uuid())
+  name         String @unique
+  description  String
+  supervisor   User   @relation(fields: [supervisorId], references: [id])
+  supervisorId String @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 }
