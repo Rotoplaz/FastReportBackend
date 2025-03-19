@@ -21,6 +21,6 @@ import { CloudinaryController } from './cloudinary.controller';
       inject: [ConfigService],
     },
   ],
-  exports: [CloudinaryService]// Exporta CloudinaryService para que otros módulos puedan usarlo
+  exports: [CloudinaryService]
 })
 export class CloudinaryModule {}

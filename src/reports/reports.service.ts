@@ -4,12 +4,15 @@ import { UpdateReportDto } from './dto/update-report.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { PaginationDto } from '../common/dto/pagination.dto';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
 @Injectable()
 export class ReportsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly cloudinaryService:CloudinaryService) {}
 
-  async create(createReportDto: CreateReportDto) {
+  async create(createReportDto: CreateReportDto, file?: Express.Multer.File) {
+
+ 
     try {
       const newReport = await this.prisma.report.create({
         data: createReportDto,
@@ -41,6 +44,12 @@ export class ReportsService {
           }
         }
       });
+      
+      // TODO: return image data in report, create entry in image table and move the query to transaction
+      if (file) {
+        const data = await this.cloudinaryService.uploadFile(file, newReport.studentId);
+      }
+
 
       return newReport;
     } catch (error) {
