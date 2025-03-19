@@ -11,7 +11,8 @@ export class CloudinaryService {
     return new Promise<any>((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
-          folder: `reports/${folder}`, 
+          folder: `reports/${folder}`,
+          allowed_formats: ["png", "jpg", "jpeg"]
         },
         (error, result) => {
           if (error) return reject(error);

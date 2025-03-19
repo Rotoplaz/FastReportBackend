@@ -10,9 +10,7 @@ import { CloudinaryService } from '../cloudinary/cloudinary.service';
 export class ReportsService {
   constructor(private readonly prisma: PrismaService, private readonly cloudinaryService:CloudinaryService) {}
 
-  async create(createReportDto: CreateReportDto, file?: Express.Multer.File) {
-
- 
+  async create(createReportDto: CreateReportDto, files?: Express.Multer.File[]) {
     try {
       const newReport = await this.prisma.report.create({
         data: createReportDto,
@@ -44,12 +42,20 @@ export class ReportsService {
           }
         }
       });
-      
+
       // TODO: return image data in report, create entry in image table and move the query to transaction
-      if (file) {
-        const data = await this.cloudinaryService.uploadFile(file, newReport.studentId);
+
+      if (!files) {
+        return newReport;
       }
 
+      if(files instanceof Array && files.length === 0) {
+        throw new BadRequestException('El arreglo de archivos no puede estar vacío')
+      }
+
+      for (const file of files) {
+        const data = await this.cloudinaryService.uploadFile(file, newReport.id);
+      }
 
       return newReport;
     } catch (error) {
