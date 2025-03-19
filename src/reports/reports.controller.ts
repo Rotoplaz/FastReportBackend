@@ -10,7 +10,7 @@ export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
   @Post()
-  @UseInterceptors(FilesInterceptor('files'))
+  @UseInterceptors(FilesInterceptor('images'))
   create(@Body() createReportDto: CreateReportDto, @UploadedFiles() files?: Express.Multer.File[]) {
     return this.reportsService.create(createReportDto, files);
   }

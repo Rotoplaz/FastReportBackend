@@ -4,6 +4,7 @@ import * as streamifier from 'streamifier';
 
 @Injectable()
 export class CloudinaryService {
+  
   uploadFile(
     file: Express.Multer.File,
     folder: string,
@@ -22,5 +23,13 @@ export class CloudinaryService {
 
       streamifier.createReadStream(file.buffer).pipe(uploadStream);
     });
+  }
+
+  async uploadFiles(
+    files: Express.Multer.File[],
+    folder: string,
+  ) {
+    const uploadPromises = files.map(file => this.uploadFile(file, folder));
+    return Promise.all(uploadPromises);
   }
 }

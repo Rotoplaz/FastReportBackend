@@ -52,11 +52,8 @@ export class ReportsService {
       if(files instanceof Array && files.length === 0) {
         throw new BadRequestException('El arreglo de archivos no puede estar vacío')
       }
-
-      for (const file of files) {
-        const data = await this.cloudinaryService.uploadFile(file, newReport.id);
-      }
-
+      const images =  await this.cloudinaryService.uploadFiles(files, newReport.id);
+      
       return newReport;
     } catch (error) {
       this.handleErrors(error);
