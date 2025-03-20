@@ -4,12 +4,13 @@ import { UpdateReportDto } from './dto/update-report.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { PaginationDto } from '../common/dto/pagination.dto';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
 @Injectable()
 export class ReportsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly cloudinaryService:CloudinaryService) {}
 
-  async create(createReportDto: CreateReportDto) {
+  async create(createReportDto: CreateReportDto, files?: Express.Multer.File[]) {
     try {
       const newReport = await this.prisma.report.create({
         data: createReportDto,
@@ -42,8 +43,34 @@ export class ReportsService {
         }
       });
 
-      return newReport;
+      if (!files) {
+        return newReport;
+      }
+
+      if(files instanceof Array && files.length === 0) {
+        throw new BadRequestException('El arreglo de archivos no puede estar vacío')
+      }
+      const uploadedImages =  await this.cloudinaryService.uploadFiles(files, newReport.id);
+   
+      this.prisma.photos.createMany({
+        data: uploadedImages.map(image => {
+          return {
+            url: image.secure_url,
+            reportId: newReport.id
+          }
+        }),
+      });
+
+      return { 
+        ...newReport,
+        images: uploadedImages.map(image => {
+          return {
+            url: image.secure_url
+          }
+        })
+      };
     } catch (error) {
+      console.log(error)
       this.handleErrors(error);
     }
   }
@@ -73,7 +100,12 @@ export class ReportsService {
             name: true,
             description: true,
           }
-        }
+        },
+        photos: { 
+          select: {
+            url: true,
+          }
+         }
       },
       take: limit,
       skip: limit * (page - 1),
@@ -115,8 +147,15 @@ export class ReportsService {
                 role: true
               }
             }
+          },
+          
+        },
+        photos: { 
+          select: {
+            id: true,
+            url: true,
           }
-        }
+         }
       }
     });
 

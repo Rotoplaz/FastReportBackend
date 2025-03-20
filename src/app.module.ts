@@ -6,6 +6,7 @@ import { AuthModule } from "./auth/auth.module";
 import { ConfigModule } from "@nestjs/config";
 import { CategoriesModule } from './categories/categories.module';
 import { ReportsModule } from './reports/reports.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { ReportsModule } from './reports/reports.module';
     ConfigModule.forRoot(),
     CategoriesModule,
     ReportsModule,
+    CloudinaryModule,
   ],
   controllers: [],
   providers: [],

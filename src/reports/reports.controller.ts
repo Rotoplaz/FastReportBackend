@@ -1,16 +1,18 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseInterceptors, UploadedFiles } from '@nestjs/common';
 import { ReportsService } from './reports.service';
 import { CreateReportDto } from './dto/create-report.dto';
 import { UpdateReportDto } from './dto/update-report.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
+import { FilesInterceptor } from '@nestjs/platform-express';
 
 @Controller('reports')
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
   @Post()
-  create(@Body() createReportDto: CreateReportDto) {
-    return this.reportsService.create(createReportDto);
+  @UseInterceptors(FilesInterceptor('images'))
+  create(@Body() createReportDto: CreateReportDto, @UploadedFiles() files?: Express.Multer.File[]) {
+    return this.reportsService.create(createReportDto, files);
   }
 
   @Get()
