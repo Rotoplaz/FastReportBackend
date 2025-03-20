@@ -202,6 +202,7 @@ export class ReportsService {
         where: { id },
       });
 
+
       return { message: `Reporte con ID ${id} eliminado correctamente` };
     } catch (error) {
       this.handleErrors(error, id);

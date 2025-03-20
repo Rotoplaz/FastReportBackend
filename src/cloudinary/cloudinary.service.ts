@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
 import * as streamifier from 'streamifier';
-import { CloudinaryResponse } from './interfaces/cloudinary-response.interface';
 
 @Injectable()
 export class CloudinaryService {
@@ -18,7 +17,7 @@ export class CloudinaryService {
         },
         (error, result) => {
           if (error) {
-            return reject(error);
+            console.log(error);
           }
           if (!result) {
             return reject(new Error('Upload result is undefined'));
