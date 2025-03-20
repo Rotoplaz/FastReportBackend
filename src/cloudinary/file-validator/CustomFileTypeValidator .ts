@@ -1,4 +1,4 @@
-import { BadGatewayException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { FileTypeValidator } from '@nestjs/common/pipes';
 
 @Injectable()
@@ -10,7 +10,7 @@ export class CustomFileTypeValidator extends FileTypeValidator {
   isValid(file: Express.Multer.File): boolean {
     const isValid = super.isValid(file);
     if (!isValid) {
-      throw new BadGatewayException('Solo se permiten archivos de tipo JPG, JPEG o PNG.');
+      throw new BadRequestException('Solo se permiten archivos de tipo JPG, JPEG o PNG.');
     }
     return true;
   }
