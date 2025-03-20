@@ -29,15 +29,6 @@ export class ReportsService {
               id: true,
               name: true,
               description: true,
-              supervisor: {
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true,
-                  email: true,
-                  role: true
-                }
-              }
             }
           }
         }
@@ -52,7 +43,7 @@ export class ReportsService {
       }
       const uploadedImages =  await this.cloudinaryService.uploadFiles(files, newReport.id);
    
-      this.prisma.photos.createMany({
+      await this.prisma.photos.createMany({
         data: uploadedImages.map(image => {
           return {
             url: image.secure_url,
@@ -152,7 +143,6 @@ export class ReportsService {
         },
         photos: { 
           select: {
-            id: true,
             url: true,
           }
          }

@@ -7,6 +7,7 @@ import { ConfigModule } from "@nestjs/config";
 import { CategoriesModule } from './categories/categories.module';
 import { ReportsModule } from './reports/reports.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
+import { AssignmentsModule } from './assignments/assignments.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { CloudinaryModule } from './cloudinary/cloudinary.module';
     CategoriesModule,
     ReportsModule,
     CloudinaryModule,
+    AssignmentsModule,
   ],
   controllers: [],
   providers: [],
