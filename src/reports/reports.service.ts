@@ -43,8 +43,6 @@ export class ReportsService {
         }
       });
 
-      // TODO: return image data in report, create entry in image table and move the query to transaction
-
       if (!files) {
         return newReport;
       }
@@ -54,7 +52,15 @@ export class ReportsService {
       }
       const images =  await this.cloudinaryService.uploadFiles(files, newReport.id);
       
-      return newReport;
+      return { 
+        newReport,
+        images: images.map	(image => {
+          return {
+            id: image.public_id,
+            url: image.secure_url
+          }
+        })
+      };
     } catch (error) {
       this.handleErrors(error);
     }

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { v2 as cloudinary } from 'cloudinary';
+import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
 import * as streamifier from 'streamifier';
+import { CloudinaryResponse } from './interfaces/cloudinary-response.interface';
 
 @Injectable()
 export class CloudinaryService {
@@ -8,15 +9,20 @@ export class CloudinaryService {
   uploadFile(
     file: Express.Multer.File,
     folder: string,
-  ){
-    return new Promise<any>((resolve, reject) => {
+  ): Promise<UploadApiResponse> {
+    return new Promise<UploadApiResponse>((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: `reports/${folder}`,
           allowed_formats: ["png", "jpg", "jpeg"]
         },
         (error, result) => {
-          if (error) return reject(error);
+          if (error) {
+            return reject(error);
+          }
+          if (!result) {
+            return reject(new Error('Upload result is undefined'));
+          }
           resolve(result);
         },
       );
@@ -28,7 +34,7 @@ export class CloudinaryService {
   async uploadFiles(
     files: Express.Multer.File[],
     folder: string,
-  ) {
+  ): Promise<UploadApiResponse[]> {
     const uploadPromises = files.map(file => this.uploadFile(file, folder));
     return Promise.all(uploadPromises);
   }
