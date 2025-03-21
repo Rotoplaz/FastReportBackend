@@ -2,10 +2,8 @@ import { Module } from '@nestjs/common';
 import { CloudinaryService } from './cloudinary.service';
 import { v2 as cloudinary } from 'cloudinary';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { CloudinaryController } from './cloudinary.controller';
 
 @Module({
-  controllers: [CloudinaryController],
   imports: [ConfigModule],
   providers: [
     CloudinaryService,

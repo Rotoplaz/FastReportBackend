@@ -71,11 +71,11 @@ model Report {
   location    String
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
-  photos      Photos[]
+  photos      ReportPhoto[]
   Asignment   Asignment[]
 }
 
-model Photos {
+model ReportPhoto {
   id        String   @id @default(uuid())
   report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
   reportId  String

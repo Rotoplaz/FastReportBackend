@@ -4,11 +4,11 @@ import { UpdateReportDto } from './dto/update-report.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { PaginationDto } from '../common/dto/pagination.dto';
-import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { ImagesService } from 'src/images/images.service';
 
 @Injectable()
 export class ReportsService {
-  constructor(private readonly prisma: PrismaService, private readonly cloudinaryService:CloudinaryService) {}
+  constructor(private readonly prisma: PrismaService, private readonly imagesService: ImagesService) {}
 
   async create(createReportDto: CreateReportDto, files?: Express.Multer.File[]) {
     try {
@@ -38,27 +38,11 @@ export class ReportsService {
         return newReport;
       }
 
-      if(files instanceof Array && files.length === 0) {
-        throw new BadRequestException('El arreglo de archivos no puede estar vacío')
-      }
-      const uploadedImages =  await this.cloudinaryService.uploadFiles(files, newReport.id);
-   
-      await this.prisma.photos.createMany({
-        data: uploadedImages.map(image => {
-          return {
-            url: image.secure_url,
-            reportId: newReport.id
-          }
-        }),
-      });
+      const images = await this.imagesService.createReportPhotos(newReport.id, files);
 
       return { 
         ...newReport,
-        images: uploadedImages.map(image => {
-          return {
-            url: image.secure_url
-          }
-        })
+        images
       };
     } catch (error) {
       console.log(error)
