@@ -79,6 +79,7 @@ export class ReportsService {
         photos: { 
           select: {
             url: true,
+            id: true,
           }
          }
       },
@@ -128,6 +129,7 @@ export class ReportsService {
         photos: { 
           select: {
             url: true,
+            id: true,
           }
          }
       }

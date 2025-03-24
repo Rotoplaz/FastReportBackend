@@ -1,7 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
-import { ReportsService } from '../reports/reports.service';
 
 @Injectable()
 export class ImagesService {
@@ -51,9 +50,8 @@ export class ImagesService {
     return reportPhotos;
   }
 
-  async createImageReport(id: string, file: Express.Multer.File) {
-
-    const uploadedImage = await this.cloudinaryService.uploadFile(file, id);
+  async createImageReport(id: string, image: Express.Multer.File) {
+    const uploadedImage = await this.cloudinaryService.uploadFile(image, id);
     const newReportImage = await this.prisma.reportPhoto.create({
       data: {
         url: uploadedImage.secure_url,
@@ -66,6 +64,35 @@ export class ImagesService {
     })
 
     return newReportImage;
+  }
+
+  async deleteImage(id: string) {
+    try {
+      const image = await this.prisma.reportPhoto.findUnique({
+        where: { id }
+      });
+
+      if (!image) {
+        throw new BadRequestException('La imagen no existe');
+      }
+
+      const isDeleted = await this.cloudinaryService.deleteImage(image.url);
+      
+      if (!isDeleted) {
+        throw new BadRequestException('Error al eliminar la imagen de Cloudinary');
+      }
+
+      await this.prisma.reportPhoto.delete({
+        where: { id }
+      });
+
+      return { message: 'Imagen eliminada correctamente' };
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException('Error al eliminar la imagen');
+    }
   }
 
 }

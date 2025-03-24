@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
 import * as streamifier from 'streamifier';
+import { extractPublicIdFromUrl } from './utils/extract-public-id';
 
 @Injectable()
 export class CloudinaryService {
@@ -36,5 +37,17 @@ export class CloudinaryService {
   ): Promise<UploadApiResponse[]> {
     const uploadPromises = files.map(file => this.uploadFile(file, folder));
     return Promise.all(uploadPromises);
+  }
+
+  async deleteImage(imageUrl: string): Promise<boolean> {
+    try {
+      const publicId = extractPublicIdFromUrl(imageUrl);
+      const result = await cloudinary.uploader.destroy(publicId);
+      console.log(publicId);
+      return result.result === 'ok';
+    } catch (error) {
+      console.error('Error deleting image from Cloudinary:', error);
+      return false;
+    }
   }
 }
