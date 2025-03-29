@@ -8,6 +8,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { ReportsModule } from './reports/reports.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { AssignmentsModule } from './assignments/assignments.module';
+import { ImagesModule } from './images/images.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { AssignmentsModule } from './assignments/assignments.module';
     ReportsModule,
     CloudinaryModule,
     AssignmentsModule,
+    ImagesModule,
   ],
   controllers: [],
   providers: [],
