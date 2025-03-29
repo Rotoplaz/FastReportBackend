@@ -188,6 +188,7 @@ export class ReportsService {
         where: { id },
       });
 
+      await this.imagesService.deleteFolderWithImages(id);
 
       return { message: `Reporte con ID ${id} eliminado correctamente` };
     } catch (error) {

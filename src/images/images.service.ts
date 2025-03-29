@@ -95,4 +95,8 @@ export class ImagesService {
     }
   }
 
+  deleteFolderWithImages(folderName: string) {
+    return this.cloudinaryService.deleteFolderWithImages(folderName); 
+  }
+
 }

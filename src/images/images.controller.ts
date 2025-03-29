@@ -23,4 +23,8 @@ export class ImagesController {
     return this.imagesService.deleteImage(id);
   }
 
+  @Delete('/folder/:folderName')
+  deleteFolderWithImages(@Param('folderName') folderName: string) {
+    return this.imagesService.deleteFolderWithImages(folderName);
+  }
 }
