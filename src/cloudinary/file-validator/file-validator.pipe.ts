@@ -10,7 +10,6 @@ export class FileValidatorPipe extends ParseFilePipe {
         new CustomFileTypeValidator({ fileType: /(jpg|jpeg|png)$/ }),
       ],
       exceptionFactory: (error) => {
-        // Personaliza los mensajes de error
         if (error === 'File is required') {
           throw new BadRequestException('Por favor, sube un archivo de imagen.');
         }

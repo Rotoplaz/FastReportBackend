@@ -59,9 +59,9 @@ enum Status {
 }
 
 model Report {
-  id          String      @id @default(uuid())
-  student     User        @relation(fields: [studentId], references: [id])
-  category    Category    @relation(fields: [categoryId], references: [id])
+  id          String        @id @default(uuid())
+  student     User          @relation(fields: [studentId], references: [id])
+  category    Category      @relation(fields: [categoryId], references: [id])
   categoryId  String
   studentId   String
   title       String
@@ -69,10 +69,11 @@ model Report {
   priority    Priority
   status      Status
   location    String
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
   photos      ReportPhoto[]
   Asignment   Asignment[]
+  Evidence    Evidence[]
 }
 
 model ReportPhoto {
@@ -92,4 +93,22 @@ model Asignment {
   workerId  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Evidence {
+  id            String          @id @default(uuid())
+  report        Report          @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  reportId      String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  EvidencePhoto EvidenceImage[]
+}
+
+model EvidenceImage {
+  id         String   @id @default(uuid())
+  evidence   Evidence @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  evidenceId String
+  url        String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
