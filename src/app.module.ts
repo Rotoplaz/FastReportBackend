@@ -9,6 +9,7 @@ import { ReportsModule } from './reports/reports.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { AssignmentsModule } from './assignments/assignments.module';
 import { ImagesModule } from './images/images.module';
+import { EvidencesModule } from './evidences/evidences.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { ImagesModule } from './images/images.module';
     CloudinaryModule,
     AssignmentsModule,
     ImagesModule,
+    EvidencesModule,
   ],
   controllers: [],
   providers: [],
