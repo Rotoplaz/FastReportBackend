@@ -17,8 +17,8 @@ export class ReportsController {
 
   @Post()
   @UseInterceptors(FilesInterceptor('images', 3))
-  create(@Body() createReportDto: CreateReportDto, @UploadedFiles(FileValidatorPipe) files?: Express.Multer.File[]) {
-    return this.reportsService.create(createReportDto, files);
+  create(@Body() createReportDto: CreateReportDto, @GetUser() user: User, @UploadedFiles(FileValidatorPipe) files?: Express.Multer.File[]) {
+    return this.reportsService.create(createReportDto, user, files );
   }
 
   @Get()

@@ -107,11 +107,7 @@ export class EvidencesService {
     return evidence;
   }
 
-  async update(id: string, updateEvidenceDto: UpdateEvidenceDto) {
 
-    await this.findOne(id);
-    return { message: 'Evidence record exists, no updates needed' };
-  }
 
   async remove(id: string) {
     try {

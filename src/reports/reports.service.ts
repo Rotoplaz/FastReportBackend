@@ -11,10 +11,10 @@ import { User } from '@prisma/client';
 export class ReportsService {
   constructor(private readonly prisma: PrismaService, private readonly imagesService: ImagesService) {}
 
-  async create(createReportDto: CreateReportDto, files?: Express.Multer.File[]) {
+  async create(createReportDto: CreateReportDto,  user: User, files?: Express.Multer.File[]) {
     try {
       const newReport = await this.prisma.report.create({
-        data: createReportDto,
+        data: {...createReportDto, studentId: user.id},
         include: {
           student: {
             select: {
@@ -149,10 +149,6 @@ export class ReportsService {
       
       if (!isAdmin) {
         const report = await this.findOne(id);
-        
-        if (!report) {
-          throw new NotFoundException(`Reporte con ID ${id} no encontrado`);
-        }
         
         if (report.studentId !== user.id) {
           throw new ForbiddenException('No tienes permiso para actualizar este reporte. Solo el creador del reporte puede actualizarlo.');
