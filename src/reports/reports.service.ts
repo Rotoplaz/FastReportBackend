@@ -1,19 +1,20 @@
-import { Injectable, NotFoundException, ConflictException, InternalServerErrorException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, InternalServerErrorException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { CreateReportDto } from './dto/create-report.dto';
 import { UpdateReportDto } from './dto/update-report.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { ImagesService } from 'src/images/images.service';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class ReportsService {
   constructor(private readonly prisma: PrismaService, private readonly imagesService: ImagesService) {}
 
-  async create(createReportDto: CreateReportDto, files?: Express.Multer.File[]) {
+  async create(createReportDto: CreateReportDto,  user: User, files?: Express.Multer.File[]) {
     try {
       const newReport = await this.prisma.report.create({
-        data: createReportDto,
+        data: {...createReportDto, studentId: user.id},
         include: {
           student: {
             select: {
@@ -142,8 +143,18 @@ export class ReportsService {
     return report;
   }
 
-  async update(id: string, updateReportDto: UpdateReportDto) {
+  async update(id: string, updateReportDto: UpdateReportDto, user: any) {
     try {
+      const isAdmin = user.role === 'admin';
+      
+      if (!isAdmin) {
+        const report = await this.findOne(id);
+        
+        if (report.studentId !== user.id) {
+          throw new ForbiddenException('No tienes permiso para actualizar este reporte. Solo el creador del reporte puede actualizarlo.');
+        }
+      }
+      
       const updatedReport = await this.prisma.report.update({
         where: { id },
         data: updateReportDto,
@@ -178,17 +189,18 @@ export class ReportsService {
 
       return updatedReport;
     } catch (error) {
+      console.log(error)
       this.handleErrors(error, id);
     }
   }
 
-  async remove(id: string) {
+  async remove(id: string, user: User) {
     try {
       await this.prisma.report.delete({
         where: { id },
       });
 
-      await this.imagesService.deleteFolderWithImages(id);
+      await this.imagesService.deleteFolderWithImages(id, user);
 
       return { message: `Reporte con ID ${id} eliminado correctamente` };
     } catch (error) {
@@ -201,7 +213,7 @@ export class ReportsService {
       if (error.message.includes('Argument `data` is missing.')) {
         throw new BadRequestException('El cuerpo de la solicitud no puede estar vacío');
       }
-      throw new InternalServerErrorException('Error inesperado');
+      throw error;
     }
 
     switch (error.code) {

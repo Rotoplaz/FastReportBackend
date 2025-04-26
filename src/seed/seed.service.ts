@@ -56,7 +56,7 @@ export class SeedService {
     }
 
     private async createUsers() {
-        const hashPassword = bcrypt.hashSync('123456', 10);
+        const hashPassword = bcrypt.hashSync('12345678', 10);
         
         const admin = await this.prisma.user.create({
             data: {

@@ -1,21 +1,27 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, forwardRef, Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
+import { User } from '@prisma/client';
+import { ReportsService } from 'src/reports/reports.service';
 
 @Injectable()
 export class ImagesService {
-
-  constructor(private readonly prisma: PrismaService, private readonly cloudinaryService: CloudinaryService) {}
+  constructor(
+    private prismaService: PrismaService,
+    private cloudinaryService: CloudinaryService,
+    @Inject(forwardRef(() => ReportsService))
+    private reportsService: ReportsService,
+  ) {}
 
   async createReportPhotos(reportId: string, files: Express.Multer.File[]) {
     try {
-      
+
       if(files instanceof Array && files.length === 0) {
         throw new BadRequestException('El arreglo de archivos no puede estar vacío')
       }
       const uploadedImages =  await this.cloudinaryService.uploadFiles(files, reportId);
    
-      await this.prisma.reportPhoto.createMany({
+      await this.prismaService.reportPhoto.createMany({
         data: uploadedImages.map(image => {
           return {
             url: image.secure_url,
@@ -37,7 +43,7 @@ export class ImagesService {
 
   async findAllPhotosReport(id: string) {
 
-    const reportPhotos = await this.prisma.reportPhoto.findMany({
+    const reportPhotos = await this.prismaService.reportPhoto.findMany({
       where: {
         reportId: id
       },
@@ -50,41 +56,56 @@ export class ImagesService {
     return reportPhotos;
   }
 
-  async createImageReport(id: string, image: Express.Multer.File) {
-    const uploadedImage = await this.cloudinaryService.uploadFile(image, id);
-    const newReportImage = await this.prisma.reportPhoto.create({
-      data: {
-        url: uploadedImage.secure_url,
-        reportId: id
-      },
-      select: {
-        url: true,
-        id: true
-      }
-    })
+  async createImageReport(id: string, image: Express.Multer.File, user: User) {
 
-    return newReportImage;
+    const report = await this.reportsService.findOne(id);
+
+    if(user.id !== report.studentId) {
+      throw new BadRequestException('No tienes permisos para crear esta imagen' );
+    }
+
+    try {
+      const uploadedImage = await this.cloudinaryService.uploadFile(image, id);
+      const newReportImage = await this.prismaService.reportPhoto.create({
+        data: {
+          url: uploadedImage.secure_url,
+          reportId: id
+        },
+        select: {
+          url: true,
+          id: true
+        }
+      })
+  
+      return newReportImage;
+      
+    } catch (error) {
+      throw new BadRequestException('Error al crear la imagen');
+    }
   }
 
-  async deleteImage(id: string) {
+  async deleteImage(id: string, user: User) {
     try {
-      const image = await this.prisma.reportPhoto.findUnique({
-        where: { id }
+      const image = await this.prismaService.reportPhoto.findUnique({
+        where: { id },
+        include: { report: { select: { studentId: true } } }
       });
 
       if (!image) {
         throw new BadRequestException('La imagen no existe');
       }
-
-      const isDeleted = await this.cloudinaryService.deleteImage(image.url);
-      
-      if (!isDeleted) {
-        throw new BadRequestException('Error al eliminar la imagen de Cloudinary');
+      if (user.role !== 'admin' && user.id !== image.report.studentId) {
+        throw new BadRequestException('No tienes permisos para eliminar esta imagen');
       }
 
-      await this.prisma.reportPhoto.delete({
-        where: { id }
-      });
+      const [isDeleted] = await Promise.all([
+        this.cloudinaryService.deleteImage(image.url),
+        this.prismaService.reportPhoto.delete({ where: { id } })
+      ]);
+      
+      if (!isDeleted) {
+        throw new BadRequestException('La imagen se eliminó de la base de datos pero hubo un error al eliminarla de Cloudinary');
+      }
 
       return { message: 'Imagen eliminada correctamente' };
     } catch (error) {
@@ -95,7 +116,17 @@ export class ImagesService {
     }
   }
 
-  deleteFolderWithImages(folderName: string) {
+  async deleteFolderWithImages(folderName: string, user: User) {
+    
+    if(user.role !== 'admin') {
+      const report = await this.reportsService.findOne(folderName);
+
+      if(user.id!== report.studentId) {
+        throw new BadRequestException('No tienes permisos para eliminar esta carpeta' );
+      }
+
+    }
+
     return this.cloudinaryService.deleteFolderWithImages(folderName); 
   }
 
