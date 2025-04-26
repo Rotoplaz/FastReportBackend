@@ -4,10 +4,6 @@ import { Priority, Status } from '@prisma/client';
 export class CreateReportDto {
   @IsUUID()
   @IsNotEmpty()
-  studentId: string;
-
-  @IsUUID()
-  @IsNotEmpty()
   categoryId: string;
 
   @IsString()

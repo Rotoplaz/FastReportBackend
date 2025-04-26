@@ -29,11 +29,6 @@ export class EvidencesController {
     return this.evidencesService.findOne(id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateEvidenceDto: UpdateEvidenceDto) {
-    return this.evidencesService.update(id, updateEvidenceDto);
-  }
-
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.evidencesService.remove(id);
