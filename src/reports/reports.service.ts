@@ -14,17 +14,22 @@ import { PaginationDto } from "../common/dto/pagination.dto";
 import { ImagesService } from "src/images/images.service";
 import { ReportsGateway } from "./reports.gateway";
 import { User } from "@prisma/client";
+import { CategoriesService } from "src/categories/categories.service";
 
 @Injectable()
 export class ReportsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly imagesService: ImagesService,
-    private readonly reportsGateway: ReportsGateway
+    private readonly reportsGateway: ReportsGateway,
+    private readonly categoriesService: CategoriesService
   ) {}
 
   async create(createReportDto: CreateReportDto,  user: User, files?: Express.Multer.File[]) {
     try {
+
+      await this.categoriesService.findOne(createReportDto.categoryId);
+      
       const newReport = await this.prisma.report.create({
         data: {...createReportDto, studentId: user.id},
         include: {
