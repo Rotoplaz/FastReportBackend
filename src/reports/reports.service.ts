@@ -1,16 +1,30 @@
-import { Injectable, NotFoundException, ConflictException, InternalServerErrorException, BadRequestException } from '@nestjs/common';
-import { CreateReportDto } from './dto/create-report.dto';
-import { UpdateReportDto } from './dto/update-report.dto';
-import { PrismaService } from '../prisma/prisma.service';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
-import { PaginationDto } from '../common/dto/pagination.dto';
-import { ImagesService } from 'src/images/images.service';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  InternalServerErrorException,
+  BadRequestException,
+} from "@nestjs/common";
+import { CreateReportDto } from "./dto/create-report.dto";
+import { UpdateReportDto } from "./dto/update-report.dto";
+import { PrismaService } from "../prisma/prisma.service";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import { PaginationDto } from "../common/dto/pagination.dto";
+import { ImagesService } from "src/images/images.service";
+import { ReportsGateway } from "./reports.gateway";
 
 @Injectable()
 export class ReportsService {
-  constructor(private readonly prisma: PrismaService, private readonly imagesService: ImagesService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly imagesService: ImagesService,
+    private readonly reportsGateway: ReportsGateway
+  ) {}
 
-  async create(createReportDto: CreateReportDto, files?: Express.Multer.File[]) {
+  async create(
+    createReportDto: CreateReportDto,
+    files?: Express.Multer.File[]
+  ) {
     try {
       const newReport = await this.prisma.report.create({
         data: createReportDto,
@@ -21,38 +35,45 @@ export class ReportsService {
               firstName: true,
               lastName: true,
               email: true,
-              role: true
-            }
+              role: true,
+            },
           },
           category: {
             select: {
               id: true,
               name: true,
               description: true,
-            }
-          }
-        }
+            },
+          },
+        },
       });
 
       if (!files) {
         return newReport;
       }
 
-      const images = await this.imagesService.createReportPhotos(newReport.id, files);
+      const images = await this.imagesService.createReportPhotos(
+        newReport.id,
+        files
+      );
 
-      return { 
+      const reportWithImages = { 
         ...newReport,
         images
       };
+
+      this.reportsGateway.notifyNewReport(reportWithImages);
+      return reportWithImages;
+      
     } catch (error) {
-      console.log(error)
+      console.log(error);
       this.handleErrors(error);
     }
   }
 
   async findAll(paginationDto: PaginationDto) {
     const { limit, page } = paginationDto;
-    
+
     if (page <= 0) {
       throw new BadRequestException("El parametro page debe ser mayor a 0");
     }
@@ -66,33 +87,33 @@ export class ReportsService {
             firstName: true,
             lastName: true,
             email: true,
-            role: true
-          }
+            role: true,
+          },
         },
         category: {
           select: {
             id: true,
             name: true,
             description: true,
-          }
+          },
         },
-        photos: { 
+        photos: {
           select: {
             url: true,
             id: true,
-          }
-         }
+          },
+        },
       },
       take: limit,
       skip: limit * (page - 1),
     });
 
     return {
-      limit, 
+      limit,
       page,
       numberOfPages: Math.ceil(numberOfReports / limit),
       count: numberOfReports,
-      data: reports
+      data: reports,
     };
   }
 
@@ -106,8 +127,8 @@ export class ReportsService {
             firstName: true,
             lastName: true,
             email: true,
-            role: true
-          }
+            role: true,
+          },
         },
         category: {
           select: {
@@ -120,19 +141,18 @@ export class ReportsService {
                 firstName: true,
                 lastName: true,
                 email: true,
-                role: true
-              }
-            }
+                role: true,
+              },
+            },
           },
-          
         },
-        photos: { 
+        photos: {
           select: {
             url: true,
             id: true,
-          }
-         }
-      }
+          },
+        },
+      },
     });
 
     if (!report) {
@@ -154,8 +174,8 @@ export class ReportsService {
               firstName: true,
               lastName: true,
               email: true,
-              role: true
-            }
+              role: true,
+            },
           },
           category: {
             select: {
@@ -168,12 +188,12 @@ export class ReportsService {
                   firstName: true,
                   lastName: true,
                   email: true,
-                  role: true
-                }
-              }
-            }
-          }
-        }
+                  role: true,
+                },
+              },
+            },
+          },
+        },
       });
 
       return updatedReport;
@@ -198,21 +218,23 @@ export class ReportsService {
 
   handleErrors(error: any, id?: string) {
     if (!(error instanceof PrismaClientKnownRequestError)) {
-      if (error.message.includes('Argument `data` is missing.')) {
-        throw new BadRequestException('El cuerpo de la solicitud no puede estar vacío');
+      if (error.message.includes("Argument `data` is missing.")) {
+        throw new BadRequestException(
+          "El cuerpo de la solicitud no puede estar vacío"
+        );
       }
-      throw new InternalServerErrorException('Error inesperado');
+      throw new InternalServerErrorException("Error inesperado");
     }
 
     switch (error.code) {
-      case 'P2025':
+      case "P2025":
         throw new NotFoundException(`Reporte con ID ${id} no encontrado`);
-      case 'P2003':
+      case "P2003":
         const target = error.meta?.target as string;
-        if (target.includes('studentId')) {
-          throw new ConflictException('El estudiante especificado no existe');
-        } else if (target.includes('categoryId')) {
-          throw new ConflictException('La categoría especificada no existe');
+        if (target.includes("studentId")) {
+          throw new ConflictException("El estudiante especificado no existe");
+        } else if (target.includes("categoryId")) {
+          throw new ConflictException("La categoría especificada no existe");
         }
         break;
       default:
