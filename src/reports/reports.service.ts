@@ -231,6 +231,45 @@ export class ReportsService {
     }
   }
 
+  async getMetrics(){
+  try {
+    const totalReportsPromise = this.prisma.report.count(); 
+    const reportsCompletedPromise = this.prisma.report.count({
+      where: { status: "completed" }
+    }); 
+    const reportsPendingPromise = this.prisma.report.count({
+      where: { status: "pending" }
+    }); 
+    const reportsInProgressPromise = this.prisma.report.count({
+      where: { status: "in_progress" }
+    });
+    const reportsPriorityHighPromise = this.prisma.report.count({
+      where: { priority: "high" }
+    });
+
+    const [totalReports, reportsCompleted, reportsPending, reportsInProgress,reportsPriorityHigh] = 
+      await Promise.all([
+        totalReportsPromise, 
+        reportsCompletedPromise, 
+        reportsPendingPromise, 
+        reportsInProgressPromise,
+        reportsPriorityHighPromise
+      ]);
+
+    return {
+      totalReports,
+      reportsInProgress,
+      reportsPending,
+      reportsCompleted,
+      reportsPriorityHigh
+    };
+  } catch (error) {
+    console.error('Error fetching metrics:', error);
+    
+    throw new BadRequestException(); 
+  }
+  }
+
   handleErrors(error: any, id?: string) {
     if (!(error instanceof PrismaClientKnownRequestError)) {
       if (error.message.includes("Argument `data` is missing.")) {
@@ -256,4 +295,6 @@ export class ReportsService {
         throw new InternalServerErrorException();
     }
   }
+
+
 }
