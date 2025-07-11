@@ -10,11 +10,12 @@ import { CreateReportDto } from "./dto/create-report.dto";
 import { UpdateReportDto } from "./dto/update-report.dto";
 import { PrismaService } from "../prisma/prisma.service";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
-import { PaginationDto } from "../common/dto/pagination.dto";
 import { ImagesService } from "src/images/images.service";
 import { ReportsGateway } from "./reports.gateway";
 import { User } from "@prisma/client";
 import { CategoriesService } from "src/categories/categories.service";
+import { dateQueryBuilder } from "./utils/date-query-builder";
+import { FindReportsDto } from "./dto/find-report.dto";
 
 @Injectable()
 export class ReportsService {
@@ -75,15 +76,21 @@ export class ReportsService {
     }
   }
 
-  async findAll(paginationDto: PaginationDto) {
-    const { limit, page } = paginationDto;
+  async findAll(findReportsDto: FindReportsDto) {
+    const { limit, page, ...date } = findReportsDto;
 
     if (page <= 0) {
       throw new BadRequestException("El parametro page debe ser mayor a 0");
     }
 
-    const numberOfReports = await this.prisma.report.count();
+    const dateFilter = dateQueryBuilder(date);
+
+    const totalCount = await this.prisma.report.count({
+      where: dateFilter,
+    });
+
     const reports = await this.prisma.report.findMany({
+      where: dateFilter,
       include: {
         student: {
           select: {
@@ -115,8 +122,8 @@ export class ReportsService {
     return {
       limit,
       page,
-      numberOfPages: Math.ceil(numberOfReports / limit),
-      count: numberOfReports,
+      numberOfPages: Math.ceil(totalCount / limit),
+      count: totalCount,
       data: reports,
     };
   }
@@ -231,6 +238,45 @@ export class ReportsService {
     }
   }
 
+  async getMetrics(){
+  try {
+    const totalReportsPromise = this.prisma.report.count(); 
+    const reportsCompletedPromise = this.prisma.report.count({
+      where: { status: "completed" }
+    }); 
+    const reportsPendingPromise = this.prisma.report.count({
+      where: { status: "pending" }
+    }); 
+    const reportsInProgressPromise = this.prisma.report.count({
+      where: { status: "in_progress" }
+    });
+    const reportsPriorityHighPromise = this.prisma.report.count({
+      where: { priority: "high" }
+    });
+
+    const [totalReports, reportsCompleted, reportsPending, reportsInProgress,reportsPriorityHigh] = 
+      await Promise.all([
+        totalReportsPromise, 
+        reportsCompletedPromise, 
+        reportsPendingPromise, 
+        reportsInProgressPromise,
+        reportsPriorityHighPromise
+      ]);
+
+    return {
+      totalReports,
+      reportsInProgress,
+      reportsPending,
+      reportsCompleted,
+      reportsPriorityHigh
+    };
+  } catch (error) {
+    console.error('Error fetching metrics:', error);
+    
+    throw new BadRequestException(); 
+  }
+  }
+
   handleErrors(error: any, id?: string) {
     if (!(error instanceof PrismaClientKnownRequestError)) {
       if (error.message.includes("Argument `data` is missing.")) {
@@ -256,4 +302,6 @@ export class ReportsService {
         throw new InternalServerErrorException();
     }
   }
+
+
 }

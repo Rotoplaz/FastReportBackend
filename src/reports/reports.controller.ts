@@ -9,12 +9,20 @@ import { Auth } from 'src/auth/decorators/auth.decorator';
 import { UserRole } from 'src/users/interfaces/user.interfaces';
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import { User } from '@prisma/client';
+import { DateParamsDto } from './dto/date-params.dto';
+import { FindReportsDto } from './dto/find-report.dto';
 
 @Auth()
 @Controller('reports')
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
+  @Auth(UserRole.ADMIN)
+  @Get('metrics')
+  getMetrics() {
+    return this.reportsService.getMetrics();
+  }
+  
   @Post()
   @UseInterceptors(FilesInterceptor('images', 3))
   create(@Body() createReportDto: CreateReportDto, @GetUser() user: User, @UploadedFiles(FileValidatorPipe) files?: Express.Multer.File[]) {
@@ -22,8 +30,8 @@ export class ReportsController {
   }
 
   @Get()
-  findAll(@Query() paginationDto: PaginationDto) {
-    return this.reportsService.findAll(paginationDto);
+  findAll(@Query() findReportsDto:FindReportsDto) {
+    return this.reportsService.findAll(findReportsDto);
   }
 
   @Get(':id')
@@ -45,4 +53,5 @@ export class ReportsController {
   remove(@Param('id') id: string, @GetUser() user: User) {
     return this.reportsService.remove(id, user);
   }
+
 }
