@@ -9,6 +9,8 @@ import { Auth } from 'src/auth/decorators/auth.decorator';
 import { UserRole } from 'src/users/interfaces/user.interfaces';
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import { User } from '@prisma/client';
+import { DateParamsDto } from './dto/date-params.dto';
+import { FindReportsDto } from './dto/find-report.dto';
 
 @Auth()
 @Controller('reports')
@@ -28,8 +30,8 @@ export class ReportsController {
   }
 
   @Get()
-  findAll(@Query() paginationDto: PaginationDto) {
-    return this.reportsService.findAll(paginationDto);
+  findAll(@Query() findReportsDto:FindReportsDto) {
+    return this.reportsService.findAll(findReportsDto);
   }
 
   @Get(':id')
