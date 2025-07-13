@@ -17,8 +17,9 @@ import { CategoriesService } from "src/categories/categories.service";
 import { dateQueryBuilder } from "./utils/date-query-builder";
 import { FindReportsDto } from "./dto/find-report.dto";
 import { OverviewQueryDto } from './dto/overview-query.dto';
-import { startOfDay, subDays, startOfYear, format, getMonth, subMonths, isWithinInterval, startOfWeek, endOfWeek, eachDayOfInterval, differenceInCalendarMonths, differenceInCalendarWeeks, isSameDay } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { getStartDateFromRange } from './utils/get-start-data';
+import { generateDailyData } from './utils/generate-daily-data';
+import { generateMonthlyData } from "./utils/generate-monthly-data";
 
 @Injectable()
 export class ReportsService {
@@ -282,98 +283,32 @@ export class ReportsService {
 
 
 
-async getReportsOverview(overviewQueryDto: OverviewQueryDto) {
-  const { range = 'year_to_date' } = overviewQueryDto;
+  async getReportsOverview(overviewQueryDto: OverviewQueryDto) {
+    const { range = 'year_to_date' } = overviewQueryDto;
 
-  const endDate = new Date();
-  const startDate = this.getStartDateFromRange(range);
+    const endDate = new Date();
+    const startDate = getStartDateFromRange(range);
 
-  const reports = await this.prisma.report.findMany({
-    where: {
-      createdAt: {
-        gte: startDate,
-        lte: endDate,
+    const reports = await this.prisma.report.findMany({
+      where: {
+        createdAt: {
+          gte: startDate,
+          lte: endDate,
+        },
       },
-    },
-    select: {
-      createdAt: true,
-    },
-  });
+      select: {
+        createdAt: true,
+      },
+    });
 
-  let data: { name: string; total: number }[] = [];
-
-  if (range === 'last_7_days') {
-
-    const days = eachDayOfInterval({ start: startDate, end: endDate });
-    data = days.map(day => ({
-      name: format(day, "eee dd/MM", { locale: es }),
-      total: 0,
-    }));
-
-    for (const report of reports) {
-      const createdAt = new Date(report.createdAt);
-      const index = days.findIndex(day => createdAt.toDateString() === day.toDateString());
-      if (index !== -1) data[index].total += 1;
-    }
-  }
-  else if (range === 'last_30_days') {
-    const days = eachDayOfInterval({ start: startDate, end: endDate });
-
-    data = days.map(day => ({
-      name: format(day, "eee dd/MM", { locale: es }),
-      total: 0,
-    }));
-
-    for (const report of reports) {
-      const createdAt = new Date(report.createdAt);
-      const index = days.findIndex(day => isSameDay(day, createdAt));
-      if (index !== -1) {
-        data[index].total += 1;
-      }
-    }
-  }
-    
-  else if (range === 'last_3_months' || range === 'year_to_date') {
-    const monthsMap: Record<string, { name: string; total: number }> = {};
-
-    for (let d = new Date(startDate); d <= endDate; d.setMonth(d.getMonth() + 1)) {
-      const key = format(d, 'yyyy-MM');
-      monthsMap[key] = {
-        name: format(d, 'MMM', { locale: es }),
-        total: 0,
-      };
-    }
-
-    for (const report of reports) {
-      const createdAt = new Date(report.createdAt);
-      const key = format(createdAt, 'yyyy-MM');
-      if (monthsMap[key]) {
-        monthsMap[key].total += 1;
-      }
-    }
-
-    data = Object.values(monthsMap);
-  }
+    const isDaily = ['last_7_days', 'last_30_days'].includes(range);
+    const data = isDaily
+      ? generateDailyData(reports, startDate, endDate)
+      : generateMonthlyData(reports, startDate, endDate);
 
     return data;
   }
 
-  private getStartDateFromRange(
-    range: 'last_7_days' | 'last_30_days' | 'last_3_months' | 'year_to_date',
-  ): Date {
-    const now = new Date();
-    switch (range) {
-      case 'last_7_days':
-        return subDays(now, 6);
-      case 'last_30_days':
-        return subDays(now, 30);
-      case 'last_3_months':
-        return subMonths(now, 2);
-      case 'year_to_date':
-      default:
-        return startOfYear(now);
-    }
-  }
 
   handleErrors(error: any, id?: string) {
     if (!(error instanceof PrismaClientKnownRequestError)) {
