@@ -11,6 +11,7 @@ import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import { User } from '@prisma/client';
 import { DateParamsDto } from './dto/date-params.dto';
 import { FindReportsDto } from './dto/find-report.dto';
+import { OverviewQueryDto } from './dto/overview-query.dto';
 
 @Auth()
 @Controller('reports')
@@ -21,6 +22,11 @@ export class ReportsController {
   @Get('metrics')
   getMetrics() {
     return this.reportsService.getMetrics();
+  }
+
+  @Get('overview')
+  async getOverview(@Query() range: OverviewQueryDto) {
+    return this.reportsService.getReportsOverview(range);
   }
   
   @Post()
