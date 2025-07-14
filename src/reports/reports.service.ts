@@ -17,9 +17,7 @@ import { CategoriesService } from "src/categories/categories.service";
 import { dateQueryBuilder } from "./utils/date-query-builder";
 import { FindReportsDto } from "./dto/find-report.dto";
 import { OverviewQueryDto } from './dto/overview-query.dto';
-import { getStartDateFromRange } from './utils/get-start-data';
-import { generateDailyData } from './utils/generate-daily-data';
-import { generateMonthlyData } from "./utils/generate-monthly-data";
+
 
 @Injectable()
 export class ReportsService {
@@ -279,34 +277,6 @@ export class ReportsService {
       
       throw new BadRequestException(); 
     }
-  }
-
-
-
-  async getReportsOverview(overviewQueryDto: OverviewQueryDto) {
-    const { range = 'year_to_date' } = overviewQueryDto;
-
-    const endDate = new Date();
-    const startDate = getStartDateFromRange(range);
-
-    const reports = await this.prisma.report.findMany({
-      where: {
-        createdAt: {
-          gte: startDate,
-          lte: endDate,
-        },
-      },
-      select: {
-        createdAt: true,
-      },
-    });
-
-    const isDaily = ['last_7_days', 'last_30_days'].includes(range);
-    const data = isDaily
-      ? generateDailyData(reports, startDate, endDate)
-      : generateMonthlyData(reports, startDate, endDate);
-
-    return data;
   }
 
 

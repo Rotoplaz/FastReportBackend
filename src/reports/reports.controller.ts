@@ -24,11 +24,6 @@ export class ReportsController {
     return this.reportsService.getMetrics();
   }
 
-  @Get('overview')
-  async getOverview(@Query() range: OverviewQueryDto) {
-    return this.reportsService.getReportsOverview(range);
-  }
-  
   @Post()
   @UseInterceptors(FilesInterceptor('images', 3))
   create(@Body() createReportDto: CreateReportDto, @GetUser() user: User, @UploadedFiles(FileValidatorPipe) files?: Express.Multer.File[]) {
