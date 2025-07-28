@@ -1,5 +1,6 @@
-import { IsOptional, IsInt, Min, Max } from 'class-validator';
+import { IsOptional, IsInt, Min, Max, IsIn } from 'class-validator';
 import { Type } from 'class-transformer';
+import { Status } from '@prisma/client';
 
 export class FindReportsDto {
   @IsOptional()
@@ -33,4 +34,8 @@ export class FindReportsDto {
   @Min(1)
   @Max(31)
   day?: number;
+
+  @IsOptional()
+  @IsIn([ "pending", "in_progress", "completed"])
+  status?: Status;
 }

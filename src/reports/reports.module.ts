@@ -8,9 +8,9 @@ import { ReportsGateway } from './reports.gateway';
 import { CategoriesModule } from 'src/categories/categories.module';
 
 @Module({
-  imports: [PrismaModule,  CloudinaryModule, forwardRef(() => ImagesModule), CategoriesModule],
+  imports: [PrismaModule, CloudinaryModule, forwardRef(() => ImagesModule), CategoriesModule],
   controllers: [ReportsController],
   providers: [ReportsService, ReportsGateway],
-  exports: [ReportsService]
+  exports: [ReportsService],
 })
 export class ReportsModule {}

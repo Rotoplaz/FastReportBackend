@@ -5,6 +5,8 @@ import {
   InternalServerErrorException,
   BadRequestException,
   ForbiddenException,
+  Inject,
+  forwardRef,
 } from "@nestjs/common";
 import { CreateReportDto } from "./dto/create-report.dto";
 import { UpdateReportDto } from "./dto/update-report.dto";
@@ -16,7 +18,6 @@ import { User } from "@prisma/client";
 import { CategoriesService } from "src/categories/categories.service";
 import { dateQueryBuilder } from "./utils/date-query-builder";
 import { FindReportsDto } from "./dto/find-report.dto";
-import { OverviewQueryDto } from './dto/overview-query.dto';
 
 
 @Injectable()
@@ -24,6 +25,7 @@ export class ReportsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly imagesService: ImagesService,
+    @Inject(forwardRef(() => ReportsGateway))
     private readonly reportsGateway: ReportsGateway,
     private readonly categoriesService: CategoriesService
   ) {}
@@ -79,7 +81,7 @@ export class ReportsService {
   }
 
   async findAll(findReportsDto: FindReportsDto) {
-    const { limit, page, ...date } = findReportsDto;
+    const { limit, page, status,...date } = findReportsDto;
 
     if (page <= 0) {
       throw new BadRequestException("El parametro page debe ser mayor a 0");
@@ -88,11 +90,11 @@ export class ReportsService {
     const dateFilter = dateQueryBuilder(date);
 
     const totalCount = await this.prisma.report.count({
-      where: dateFilter,
+      where: {...dateFilter , status},
     });
 
     const reports = await this.prisma.report.findMany({
-      where: dateFilter,
+      where: {...dateFilter , status},
       include: {
         student: {
           select: {
