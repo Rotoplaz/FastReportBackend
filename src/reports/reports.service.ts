@@ -19,7 +19,6 @@ import { CategoriesService } from "src/categories/categories.service";
 import { dateQueryBuilder } from "./utils/date-query-builder";
 import { FindReportsDto } from "./dto/find-report.dto";
 
-
 @Injectable()
 export class ReportsService {
   constructor(
@@ -30,13 +29,16 @@ export class ReportsService {
     private readonly categoriesService: CategoriesService
   ) {}
 
-  async create(createReportDto: CreateReportDto,  user: User, files?: Express.Multer.File[]) {
+  async create(
+    createReportDto: CreateReportDto,
+    user: User,
+    files?: Express.Multer.File[]
+  ) {
     try {
-
       await this.categoriesService.findOne(createReportDto.categoryId);
-      
+
       const newReport = await this.prisma.report.create({
-        data: {...createReportDto, studentId: user.id},
+        data: { ...createReportDto, studentId: user.id },
         include: {
           student: {
             select: {
@@ -66,14 +68,13 @@ export class ReportsService {
         files
       );
 
-      const reportWithImages = { 
+      const reportWithImages = {
         ...newReport,
-        images
+        images,
       };
 
       this.reportsGateway.notifyNewReport(reportWithImages);
       return reportWithImages;
-      
     } catch (error) {
       console.log(error);
       this.handleErrors(error);
@@ -81,7 +82,7 @@ export class ReportsService {
   }
 
   async findAll(findReportsDto: FindReportsDto) {
-    const { limit, page, status,...date } = findReportsDto;
+    const { limit, page, status, ...date } = findReportsDto;
 
     if (page <= 0) {
       throw new BadRequestException("El parametro page debe ser mayor a 0");
@@ -90,11 +91,11 @@ export class ReportsService {
     const dateFilter = dateQueryBuilder(date);
 
     const totalCount = await this.prisma.report.count({
-      where: {...dateFilter , status},
+      where: { ...dateFilter, status },
     });
 
     const reports = await this.prisma.report.findMany({
-      where: {...dateFilter , status},
+      where: { ...dateFilter, status },
       include: {
         student: {
           select: {
@@ -179,16 +180,18 @@ export class ReportsService {
 
   async update(id: string, updateReportDto: UpdateReportDto, user: any) {
     try {
-      const isAdmin = user.role === 'admin';
-      
+      const isAdmin = user.role === "admin";
+
       if (!isAdmin) {
         const report = await this.findOne(id);
-        
+
         if (report.studentId !== user.id) {
-          throw new ForbiddenException('No tienes permiso para actualizar este reporte. Solo el creador del reporte puede actualizarlo.');
+          throw new ForbiddenException(
+            "No tienes permiso para actualizar este reporte. Solo el creador del reporte puede actualizarlo."
+          );
         }
       }
-      
+
       const updatedReport = await this.prisma.report.update({
         where: { id },
         data: updateReportDto,
@@ -223,7 +226,7 @@ export class ReportsService {
 
       return updatedReport;
     } catch (error) {
-      console.log(error)
+      console.log(error);
       this.handleErrors(error, id);
     }
   }
@@ -242,45 +245,61 @@ export class ReportsService {
     }
   }
 
-  async getMetrics(){
+  async getMetrics() {
     try {
-      const totalReportsPromise = this.prisma.report.count(); 
+      const totalReportsPromise = this.prisma.report.count();
       const reportsCompletedPromise = this.prisma.report.count({
-        where: { status: "completed" }
-      }); 
-      const reportsPendingPromise = this.prisma.report.count({
-        where: { status: "pending" }
-      }); 
-      const reportsInProgressPromise = this.prisma.report.count({
-        where: { status: "in_progress" }
+        where: { status: "completed" },
       });
-      const reportsPriorityHighPromise = this.prisma.report.count({
-        where: { priority: "high" }
+      const reportsPendingPromise = this.prisma.report.count({
+        where: { status: "pending" },
+      });
+      const reportsInProgressPromise = this.prisma.report.count({
+        where: { status: "in_progress" },
+      });
+      const highPriorityReportsPromise = this.prisma.report.count({
+        where: { priority: "high" },
+      });
+      const lowPriorityReportsPromise = this.prisma.report.count({
+        where: { priority: "low" },
+      });
+      const mediumPriorityReportsPromise = this.prisma.report.count({
+        where: { priority: "medium" },
       });
 
-      const [totalReports, reportsCompleted, reportsPending, reportsInProgress,reportsPriorityHigh] = 
-        await Promise.all([
-          totalReportsPromise, 
-          reportsCompletedPromise, 
-          reportsPendingPromise, 
-          reportsInProgressPromise,
-          reportsPriorityHighPromise
-        ]);
+      const [
+        totalReports,
+        reportsCompleted,
+        reportsPending,
+        reportsInProgress,
+        highPriorityReports,
+        lowPriorityReports,
+        mediumPriorityReports,
+      ] = await Promise.all([
+        totalReportsPromise,
+        reportsCompletedPromise,
+        reportsPendingPromise,
+        reportsInProgressPromise,
+        highPriorityReportsPromise,
+        lowPriorityReportsPromise,
+        mediumPriorityReportsPromise,
+      ]);
 
       return {
         totalReports,
         reportsInProgress,
         reportsPending,
         reportsCompleted,
-        reportsPriorityHigh
+        highPriorityReports,
+        lowPriorityReports,
+        mediumPriorityReports,
       };
     } catch (error) {
-      console.error('Error fetching metrics:', error);
-      
-      throw new BadRequestException(); 
+      console.error("Error fetching metrics:", error);
+
+      throw new BadRequestException();
     }
   }
-
 
   handleErrors(error: any, id?: string) {
     if (!(error instanceof PrismaClientKnownRequestError)) {
@@ -307,6 +326,4 @@ export class ReportsService {
         throw new InternalServerErrorException();
     }
   }
-
-
 }
