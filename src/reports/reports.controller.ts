@@ -11,6 +11,7 @@ import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import { User } from '@prisma/client';
 import { DateParamsDto } from './dto/date-params.dto';
 import { FindReportsDto } from './dto/find-report.dto';
+import { OverviewQueryDto } from './dto/overview-query.dto';
 
 @Auth()
 @Controller('reports')
@@ -22,7 +23,7 @@ export class ReportsController {
   getMetrics() {
     return this.reportsService.getMetrics();
   }
-  
+
   @Post()
   @UseInterceptors(FilesInterceptor('images', 3))
   create(@Body() createReportDto: CreateReportDto, @GetUser() user: User, @UploadedFiles(FileValidatorPipe) files?: Express.Multer.File[]) {
