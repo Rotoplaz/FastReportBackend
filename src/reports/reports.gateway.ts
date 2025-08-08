@@ -38,7 +38,7 @@ export class ReportsGateway {
     this.server.emit("metrics", data);
   }
 
-  @SubscribeMessage("getInitialReports")
+  @SubscribeMessage("getInitialRecentReports")
   async handleGetInitialReports(@ConnectedSocket() client: Socket) {
     const today = new Date();
     const year = today.getFullYear();
@@ -52,8 +52,26 @@ export class ReportsGateway {
       limit: 100,
       page: 1,
     });
-    client.emit("initialReports", reports);
+    client.emit("initialRecentReports", reports);
   }
+
+
+  @SubscribeMessage("getAnnualReports")
+  async handleGetAnnualReports(@ConnectedSocket() client: Socket) {
+    const today = new Date();
+    const year = today.getFullYear();
+
+    const reports = await this.reportsService.findAll({
+      year,
+      limit: 100,
+      page: 1,
+    });
+
+    client.emit("annualReports", reports);
+  }
+
+
+
   @SubscribeMessage("getInitiaMetrics")
   async handleGetInitialMetrics(@ConnectedSocket() client: Socket) {
     const metrics = await this.reportsService.getMetrics();

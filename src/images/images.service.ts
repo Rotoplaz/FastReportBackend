@@ -13,7 +13,7 @@ export class ImagesService {
     private reportsService: ReportsService,
   ) {}
 
-  async createReportPhotos(reportId: string, files: Express.Multer.File[]) {
+  async createReportImages(reportId: string, files: Express.Multer.File[]) {
     try {
 
       if(files instanceof Array && files.length === 0) {
@@ -21,7 +21,7 @@ export class ImagesService {
       }
       const uploadedImages =  await this.cloudinaryService.uploadFiles(files, reportId);
    
-      await this.prismaService.reportPhoto.createMany({
+      await this.prismaService.reportImage.createMany({
         data: uploadedImages.map(image => {
           return {
             url: image.secure_url,
@@ -30,7 +30,7 @@ export class ImagesService {
         }),
       });
 
-      const images = await this.findAllPhotosReport(reportId)
+      const images = await this.findAllImagesReport(reportId)
 
       return images;
 
@@ -41,9 +41,9 @@ export class ImagesService {
 
   }
 
-  async findAllPhotosReport(id: string) {
+  async findAllImagesReport(id: string) {
 
-    const reportPhotos = await this.prismaService.reportPhoto.findMany({
+    const reportImages = await this.prismaService.reportImage.findMany({
       where: {
         reportId: id
       },
@@ -53,7 +53,7 @@ export class ImagesService {
       }
     })
     
-    return reportPhotos;
+    return reportImages;
   }
 
   async createImageReport(id: string, image: Express.Multer.File, user: User) {
@@ -66,7 +66,7 @@ export class ImagesService {
 
     try {
       const uploadedImage = await this.cloudinaryService.uploadFile(image, id);
-      const newReportImage = await this.prismaService.reportPhoto.create({
+      const newReportImage = await this.prismaService.reportImage.create({
         data: {
           url: uploadedImage.secure_url,
           reportId: id
@@ -86,7 +86,7 @@ export class ImagesService {
 
   async deleteImage(id: string, user: User) {
     try {
-      const image = await this.prismaService.reportPhoto.findUnique({
+      const image = await this.prismaService.reportImage.findUnique({
         where: { id },
         include: { report: { select: { studentId: true } } }
       });
@@ -100,7 +100,7 @@ export class ImagesService {
 
       const [isDeleted] = await Promise.all([
         this.cloudinaryService.deleteImage(image.url),
-        this.prismaService.reportPhoto.delete({ where: { id } })
+        this.prismaService.reportImage.delete({ where: { id } })
       ]);
       
       if (!isDeleted) {

@@ -63,7 +63,7 @@ export class ReportsService {
         return newReport;
       }
 
-      const images = await this.imagesService.createReportPhotos(
+      const images = await this.imagesService.createReportImages(
         newReport.id,
         files
       );
@@ -113,7 +113,7 @@ export class ReportsService {
             description: true,
           },
         },
-        photos: {
+        images: {
           select: {
             url: true,
             id: true,
@@ -162,7 +162,7 @@ export class ReportsService {
             },
           },
         },
-        photos: {
+        images: {
           select: {
             url: true,
             id: true,

@@ -47,7 +47,7 @@ export class SeedService {
         await this.prisma.evidenceImage.deleteMany();
         await this.prisma.evidence.deleteMany();
         await this.prisma.asignment.deleteMany();
-        await this.prisma.reportPhoto.deleteMany();
+        await this.prisma.reportImage.deleteMany();
         await this.prisma.report.deleteMany();
         await this.prisma.category.deleteMany();
         await this.prisma.user.deleteMany();
@@ -221,7 +221,7 @@ export class SeedService {
             for (let i = 0; i < numPhotos; i++) {
                 const randomUrl = photoUrls[Math.floor(Math.random() * photoUrls.length)];
                 
-                await this.prisma.reportPhoto.create({
+                await this.prisma.reportImage.create({
                     data: {
                         reportId: report.id,
                         url: randomUrl

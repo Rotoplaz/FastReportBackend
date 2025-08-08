@@ -13,7 +13,7 @@ export class ImagesController {
 
   @Get("/report/:id")
   findAllPhotosReport(@Param('id') id: string) {
-    return this.imagesService.findAllPhotosReport(id);
+    return this.imagesService.findAllImagesReport(id);
   }
 
   @Post("/report/:id")
