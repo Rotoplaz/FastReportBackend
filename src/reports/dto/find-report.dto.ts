@@ -1,19 +1,9 @@
 import { IsOptional, IsInt, Min, Max, IsIn } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Status } from '@prisma/client';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
 
-export class FindReportsDto {
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  limit: number = 10;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  page: number = 1;
+export class FindReportsDto extends PaginationDto {
 
   @IsOptional()
   @Type(() => Number)

@@ -4,7 +4,9 @@ import { Report } from "@prisma/client";
 import { ReportsService } from "./reports.service";
 import { forwardRef, Inject } from "@nestjs/common";
 @WebSocketGateway({
-  cors: true,
+  cors: {
+    methods: ["GET", "POST"],
+  },
   namespace: "reports",
 })
 export class ReportsGateway {
@@ -17,63 +19,51 @@ export class ReportsGateway {
   server: Server;
 
   async handleConnection(client: Socket) {
-
-    this.handleGetInitialReports(client);
-    this.handleGetInitialMetrics(client);
-
+    await this.sendInitialReports(client);
+    await this.sendInitialMetrics(client);
   }
 
-  notifyNewReport(report: Report) {
+  async notifyNewReport(report: Report) {
     this.server.emit("newReport", report);
-    this.notifyReportMetricts();
+    await this.notifyReportMetrics();
   }
 
-  notifyReportUpdate(report: Report) {
+  async notifyReportUpdate(report: Report) {
     this.server.emit("reportUpdate", report);
-    this.notifyReportMetricts();
+    await this.notifyReportMetrics();
   }
 
-  async notifyReportMetricts() {
+  async notifyReportMetrics() {
     const data = await this.reportsService.getMetrics();
     this.server.emit("metrics", data);
   }
 
   @SubscribeMessage("getInitialRecentReports")
-  async handleGetInitialReports(@ConnectedSocket() client: Socket) {
+  async sendInitialReports(@ConnectedSocket() client: Socket) {
     const today = new Date();
-    const year = today.getFullYear();
-    const month = today.getMonth() + 1;
-    const day = today.getDate();
-
     const reports = await this.reportsService.findAll({
-      year,
-      month,
-      day,
+      year: today.getFullYear(),
+      month: today.getMonth() + 1,
+      day: today.getDate(),
       limit: 100,
       page: 1,
     });
     client.emit("initialRecentReports", reports);
   }
 
-
   @SubscribeMessage("getAnnualReports")
-  async handleGetAnnualReports(@ConnectedSocket() client: Socket) {
+  async sendAnnualReports(@ConnectedSocket() client: Socket) {
     const today = new Date();
-    const year = today.getFullYear();
-
     const reports = await this.reportsService.findAll({
-      year,
+      year: today.getFullYear(),
       limit: 100,
       page: 1,
     });
-
     client.emit("annualReports", reports);
   }
 
-
-
-  @SubscribeMessage("getInitiaMetrics")
-  async handleGetInitialMetrics(@ConnectedSocket() client: Socket) {
+  @SubscribeMessage("getInitialMetrics")
+  async sendInitialMetrics(@ConnectedSocket() client: Socket) {
     const metrics = await this.reportsService.getMetrics();
     client.emit("initialMetrics", metrics);
   }

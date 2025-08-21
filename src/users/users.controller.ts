@@ -5,8 +5,11 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { Auth } from 'src/auth/decorators/auth.decorator';
 import { UserRole } from './interfaces/user.interfaces';
+import { FindUsersDto } from './dto/find-users.dto';
+import { GetUser } from 'src/auth/decorators/get-user.decorator';
+import { User } from '@prisma/client';
 
-@Auth(UserRole.ADMIN)
+@Auth(UserRole.ADMIN, UserRole.SUPERVISOR)
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
@@ -17,8 +20,8 @@ export class UsersController {
   }
 
   @Get()
-  findAll(@Query() paginationDto: PaginationDto) {
-    return this.usersService.findAll(paginationDto);
+  findAll(@Query() findUsersDto: FindUsersDto, @GetUser() user: User) {
+    return this.usersService.findAll(findUsersDto, user);
   }
 
   @Get(':id')
