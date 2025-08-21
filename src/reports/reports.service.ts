@@ -81,7 +81,7 @@ export class ReportsService {
     }
   }
 
-  async findAll(findReportsDto: FindReportsDto) {
+  async findAll(findReportsDto: FindReportsDto, user: User) {
     const { limit, page, status, ...date } = findReportsDto;
 
     if (page <= 0) {
@@ -90,12 +90,21 @@ export class ReportsService {
 
     const dateFilter = dateQueryBuilder(date);
 
+    let categoryFilter = {};
+    if (user.role === "supervisor") {
+      const supervisorCategory = await this.prisma.category.findFirst({
+        where: { supervisorId: user.id },
+      });
+      categoryFilter = { categoryId: supervisorCategory?.id };
+    }
+
+
     const totalCount = await this.prisma.report.count({
-      where: { ...dateFilter, status },
+      where: { ...dateFilter, status, ...categoryFilter },
     });
 
     const reports = await this.prisma.report.findMany({
-      where: { ...dateFilter, status },
+      where: { ...dateFilter, status, ...categoryFilter },
       include: {
         student: {
           select: {

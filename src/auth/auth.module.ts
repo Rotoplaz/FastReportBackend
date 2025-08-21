@@ -23,7 +23,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         }
       }
     })
-    // JwtMo
   ],
   controllers: [AuthController],
   providers: [AuthService, PrismaService, JwtStrategy],

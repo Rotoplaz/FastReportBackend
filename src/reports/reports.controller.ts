@@ -2,16 +2,13 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseIntercepto
 import { ReportsService } from './reports.service';
 import { CreateReportDto } from './dto/create-report.dto';
 import { UpdateReportDto } from './dto/update-report.dto';
-import { PaginationDto } from '../common/dto/pagination.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { FileValidatorPipe } from 'src/cloudinary/file-validator/file-validator.pipe';
 import { Auth } from 'src/auth/decorators/auth.decorator';
 import { UserRole } from 'src/users/interfaces/user.interfaces';
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import { User } from '@prisma/client';
-import { DateParamsDto } from './dto/date-params.dto';
 import { FindReportsDto } from './dto/find-report.dto';
-import { OverviewQueryDto } from './dto/overview-query.dto';
 
 @Auth()
 @Controller('reports')
@@ -31,8 +28,8 @@ export class ReportsController {
   }
 
   @Get()
-  findAll(@Query() findReportsDto:FindReportsDto) {
-    return this.reportsService.findAll(findReportsDto);
+  findAll(@Query() findReportsDto:FindReportsDto, @GetUser() user: User) {
+    return this.reportsService.findAll(findReportsDto, user);
   }
 
   @Get(':id')
