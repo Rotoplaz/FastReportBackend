@@ -254,26 +254,28 @@ export class ReportsService {
     }
   }
 
-  async getMetrics() {
+  async getCategoryMetrics(categoryId: string) {
     try {
-      const totalReportsPromise = this.prisma.report.count();
+      const category = await this.prisma.category.findFirst({where: { supervisorId: categoryId } });
+      
+      const totalReportsPromise = this.prisma.report.count({ where: {categoryId: category?.id} });
       const reportsCompletedPromise = this.prisma.report.count({
-        where: { status: "completed" },
+        where: { status: "completed", categoryId: category?.id },
       });
       const reportsPendingPromise = this.prisma.report.count({
-        where: { status: "pending" },
+        where: { status: "pending", categoryId: category?.id },
       });
       const reportsInProgressPromise = this.prisma.report.count({
-        where: { status: "in_progress" },
+        where: { status: "in_progress", categoryId: category?.id },
       });
       const highPriorityReportsPromise = this.prisma.report.count({
-        where: { priority: "high" },
+        where: { priority: "high", categoryId: category?.id },
       });
       const lowPriorityReportsPromise = this.prisma.report.count({
-        where: { priority: "low" },
+        where: { priority: "low", categoryId: category?.id },
       });
       const mediumPriorityReportsPromise = this.prisma.report.count({
-        where: { priority: "medium" },
+        where: { priority: "medium", categoryId: category?.id },
       });
 
       const [
@@ -309,6 +311,63 @@ export class ReportsService {
       throw new BadRequestException();
     }
   }
+
+    async getGlobalMetrics() {
+    try {
+      const totalReportsPromise = this.prisma.report.count();
+      const reportsCompletedPromise = this.prisma.report.count({
+        where: { status: "completed", },
+      });
+      const reportsPendingPromise = this.prisma.report.count({
+        where: { status: "pending", },
+      });
+      const reportsInProgressPromise = this.prisma.report.count({
+        where: { status: "in_progress", },
+      });
+      const highPriorityReportsPromise = this.prisma.report.count({
+        where: { priority: "high", },
+      });
+      const lowPriorityReportsPromise = this.prisma.report.count({
+        where: { priority: "low", },
+      });
+      const mediumPriorityReportsPromise = this.prisma.report.count({
+        where: { priority: "medium", },
+      });
+
+      const [
+        totalReports,
+        reportsCompleted,
+        reportsPending,
+        reportsInProgress,
+        highPriorityReports,
+        lowPriorityReports,
+        mediumPriorityReports,
+      ] = await Promise.all([
+        totalReportsPromise,
+        reportsCompletedPromise,
+        reportsPendingPromise,
+        reportsInProgressPromise,
+        highPriorityReportsPromise,
+        lowPriorityReportsPromise,
+        mediumPriorityReportsPromise,
+      ]);
+
+      return {
+        totalReports,
+        reportsInProgress,
+        reportsPending,
+        reportsCompleted,
+        highPriorityReports,
+        lowPriorityReports,
+        mediumPriorityReports,
+      };
+    } catch (error) {
+      console.error("Error fetching metrics:", error);
+
+      throw new BadRequestException();
+    }
+  }
+
 
   handleErrors(error: any, id?: string) {
     if (!(error instanceof PrismaClientKnownRequestError)) {

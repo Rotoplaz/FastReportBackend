@@ -16,6 +16,7 @@ export class AuthService {
     const { code, password } = loginDto;
     const user = await this.prisma.user.findUnique({
       where: { code },
+      include: { Category: true } 
     });
 
     if (!user) {

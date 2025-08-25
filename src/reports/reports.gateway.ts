@@ -40,47 +40,66 @@ export class ReportsGateway {
 
       const user = await this.prisma.user.findUnique({
         where: { id: payload.id },
+        include: { Category: true },
       });
 
-      if (!user) {
-        throw new Error("Usuario no encontrado en DB");
-      }
+      if (!user) throw new Error("Usuario no encontrado en DB");
 
       client.data.user = user;
-
       client.emit("authenticated");
 
+      if (user.role === "supervisor" && user.Category) {
+        client.join(`category_${user.Category.id}`);
+      } else if (user.role === "admin") {
+        client.join("admins");
+      }
 
-      await this.sendInitialReports(client);
-      await this.sendInitialMetrics(client);
     } catch (e) {
       console.error("Error en auth WS:", e.message);
       client.emit("error", { type: "auth", message: "Autenticación inválida" });
       client.disconnect();
     }
   }
-
   async notifyNewReport(report: Report) {
-    this.server.emit("newReport", report);
+    this.server.to("admins").emit("newReport", report);
+    this.server.to(`category_${report.categoryId}`).emit("newReport", report);
+
     await this.notifyReportMetrics();
   }
 
   async notifyReportUpdate(report: Report) {
-    this.server.emit("reportUpdate", report);
+    this.server.to("admins").emit("reportUpdate", report);
+    this.server
+      .to(`category_${report.categoryId}`)
+      .emit("reportUpdate", report);
+
     await this.notifyReportMetrics();
   }
 
   async notifyReportMetrics() {
-    const data = await this.reportsService.getMetrics();
-    this.server.emit("metrics", data);
+    try {
+      const globalMetrics = await this.reportsService.getGlobalMetrics();
+      this.server.to("admins").emit("metrics", globalMetrics);
+
+      const categories = await this.prisma.category.findMany({
+        select: { id: true },
+      });
+      for (const cat of categories) {
+        const metrics = await this.reportsService.getCategoryMetrics(cat.id);
+        this.server.to(`category_${cat.id}`).emit("metrics", metrics);
+      }
+    } catch (error) {
+      console.error("Error enviando métricas:", error.message);
+    }
   }
+
 
   @UseGuards(WsAuthGuard)
   @SubscribeMessage("getInitialRecentReports")
   async sendInitialReports(@ConnectedSocket() client: Socket) {
     const user = client.data.user;
     const today = new Date();
-    
+
     const reports = await this.reportsService.findAll(
       {
         year: today.getFullYear(),
@@ -114,9 +133,9 @@ export class ReportsGateway {
     client.emit("annualReports", reports);
   }
 
+  @UseGuards(WsAuthGuard)
   @SubscribeMessage("getInitialMetrics")
-  async sendInitialMetrics(@ConnectedSocket() client: Socket) {
-    const metrics = await this.reportsService.getMetrics();
-    client.emit("initialMetrics", metrics);
+  async sendInitialMetrics() {
+    await this.notifyReportMetrics();
   }
 }
