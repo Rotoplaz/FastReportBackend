@@ -21,18 +21,20 @@ enum UserRole {
 }
 
 model User {
-  id        String      @id @default(uuid())
-  firstName String
-  lastName  String
-  email     String      @unique
-  code      String      @unique
-  password  String
-  role      UserRole
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  Category  Category?
-  Report    Report[]
-  Asignment Asignment[]
+  id             String      @id @default(uuid())
+  firstName      String
+  lastName       String
+  email          String      @unique
+  code           String      @unique
+  password       String
+  role           UserRole
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  Category       Category?
+  categoryId     String?
+  workerCategory Category?   @relation("CategoryWorkers", fields: [categoryId], references: [id])
+  Report         Report[]
+  Asignment      Asignment[]
 }
 
 model Category {
@@ -44,6 +46,7 @@ model Category {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   Report       Report[]
+  workers      User[]   @relation("CategoryWorkers")
 }
 
 enum Priority {

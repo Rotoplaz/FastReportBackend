@@ -34,33 +34,37 @@ export class UsersService {
     }
   }
 
+  async getWorkersByCategory(categoryId: string) {
+    const workers = await this.prisma.category.findFirst({
+      where: { id: categoryId },
+      select: { workers: { omit: {password: true} } }
+    });
+    return workers;
+  }
+
   async findAll(findUsersDto: FindUsersDto, user: User) {
     const { limit = 10, page = 0 } = findUsersDto;
 
-    let where = {};
-
-    if (user.role === UserRole.admin) {
-      where = {
+    
+    if (user.role !== UserRole.admin) {
+      return new ForbiddenException("Auth error");
+    } 
+    
+    const where = {
         role: {
           in: [UserRole.supervisor, UserRole.worker],
         },
       };
-    } else if (user.role === UserRole.supervisor) {
-     
-      where = { role: UserRole.worker };
-    } else {
-      throw new ForbiddenException("No tienes permisos para ver usuarios");
-    }
 
     const users = await this.prisma.user.findMany({
-      where,
+      where: { ...where },
       take: limit,
       skip: limit * (page - 1),
     });
 
     const usersCount = await this.prisma.user.count({
-      where
-    })
+      where,
+    });
 
     return {
       limit,

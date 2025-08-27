@@ -256,7 +256,7 @@ export class ReportsService {
 
   async getCategoryMetrics(categoryId: string) {
     try {
-      const category = await this.prisma.category.findFirst({where: { supervisorId: categoryId } });
+      const category = await this.prisma.category.findFirst({where: { id: categoryId } });
       
       const totalReportsPromise = this.prisma.report.count({ where: {categoryId: category?.id} });
       const reportsCompletedPromise = this.prisma.report.count({

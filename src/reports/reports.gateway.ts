@@ -9,8 +9,8 @@ import { Report } from "@prisma/client";
 import { ReportsService } from "./reports.service";
 import { forwardRef, Inject, UseGuards } from "@nestjs/common";
 import { PrismaService } from "src/prisma/prisma.service";
-import { JwtService } from "@nestjs/jwt";
 import { WsAuthGuard } from "src/auth/decorators/ws-auth.guard";
+import { WsAuthService } from '../auth/services/ws-auth.service';
 @WebSocketGateway({
   cors: {
     methods: ["GET", "POST"],
@@ -22,7 +22,7 @@ export class ReportsGateway {
     @Inject(forwardRef(() => ReportsService))
     private readonly reportsService: ReportsService,
     private readonly prisma: PrismaService,
-    private readonly jwtService: JwtService
+    private readonly wsAuthService:WsAuthService
   ) {}
 
   @WebSocketServer()
@@ -30,36 +30,14 @@ export class ReportsGateway {
 
   async handleConnection(client: Socket) {
     try {
-      const raw =
-        client.handshake.auth?.token || client.handshake.headers?.authorization;
-
-      if (!raw) throw new Error("Token ausente");
-
-      const token = raw.startsWith("Bearer ") ? raw.slice(7) : raw;
-      const payload = this.jwtService.verify<{ id: string }>(token);
-
-      const user = await this.prisma.user.findUnique({
-        where: { id: payload.id },
-        include: { Category: true },
-      });
-
-      if (!user) throw new Error("Usuario no encontrado en DB");
-
-      client.data.user = user;
-      client.emit("authenticated");
-
-      if (user.role === "supervisor" && user.Category) {
-        client.join(`category_${user.Category.id}`);
-      } else if (user.role === "admin") {
-        client.join("admins");
-      }
-
+      await this.wsAuthService.authenticateClient(client);
     } catch (e) {
       console.error("Error en auth WS:", e.message);
       client.emit("error", { type: "auth", message: "Autenticación inválida" });
       client.disconnect();
     }
   }
+  
   async notifyNewReport(report: Report) {
     this.server.to("admins").emit("newReport", report);
     this.server.to(`category_${report.categoryId}`).emit("newReport", report);
@@ -84,15 +62,17 @@ export class ReportsGateway {
       const categories = await this.prisma.category.findMany({
         select: { id: true },
       });
-      for (const cat of categories) {
-        const metrics = await this.reportsService.getCategoryMetrics(cat.id);
-        this.server.to(`category_${cat.id}`).emit("metrics", metrics);
-      }
+
+      await Promise.all(
+        categories.map(async (cat) => {
+          const metrics = await this.reportsService.getCategoryMetrics(cat.id);
+          this.server.to(`category_${cat.id}`).emit("metrics", metrics);
+        })
+      );
     } catch (error) {
       console.error("Error enviando métricas:", error.message);
     }
   }
-
 
   @UseGuards(WsAuthGuard)
   @SubscribeMessage("getInitialRecentReports")

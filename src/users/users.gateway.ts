@@ -1,0 +1,66 @@
+import {
+  ConnectedSocket,
+  SubscribeMessage,
+  WebSocketGateway,
+  WebSocketServer,
+} from "@nestjs/websockets";
+import { UsersService } from "./users.service";
+import { PrismaService } from "src/prisma/prisma.service";
+import { WsAuthService } from "src/auth/services/ws-auth.service";
+import { forwardRef, Inject, UseGuards } from "@nestjs/common";
+import { Server, Socket } from "socket.io";
+import { WsAuthGuard } from "src/auth/decorators/ws-auth.guard";
+
+@WebSocketGateway({
+  cors: {
+    methods: ["GET", "POST"],
+  },
+  namespace: "workers",
+})
+export class ReportsGateway {
+  constructor(
+    @Inject(forwardRef(() => UsersService))
+    private readonly usersService: UsersService,
+    private readonly prisma: PrismaService,
+    private readonly wsAuthService: WsAuthService
+  ) {}
+
+  @WebSocketServer()
+  server: Server;
+
+  async handleConnection(client: Socket) {
+    try {
+      await this.wsAuthService.authenticateClient(client);
+    } catch (e) {
+      console.error("Error en auth WS:", e.message);
+      client.emit("error", { type: "auth", message: "Autenticación inválida" });
+      client.disconnect();
+    }
+  }
+
+  @UseGuards(WsAuthGuard)
+  @SubscribeMessage("getWorkers")
+  async emitWorkers(@ConnectedSocket() client: Socket) {
+    const user = client.data.user;
+
+    if (user.role === "admin") {
+      const workers = await this.usersService.findAll(
+        { limit: 1000, page: 1 },
+        user
+      );
+      this.server.to("admins").emit("workers", workers);
+    } else {
+      const category = await this.prisma.category.findFirst({
+        where: { id: user.Category.id },
+      });
+
+      if ( !category ) return;
+
+      const workers = await this.usersService.getWorkersByCategory(
+        category.id
+      );
+
+      this.server.to(`category_${category.id}`).emit("workers", workers);
+    }
+  }
+}
