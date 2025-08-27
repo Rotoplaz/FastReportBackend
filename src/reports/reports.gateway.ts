@@ -1,8 +1,16 @@
-import { ConnectedSocket, SubscribeMessage, WebSocketGateway, WebSocketServer } from "@nestjs/websockets";
+import {
+  ConnectedSocket,
+  SubscribeMessage,
+  WebSocketGateway,
+  WebSocketServer,
+} from "@nestjs/websockets";
 import { Server, Socket } from "socket.io";
 import { Report } from "@prisma/client";
 import { ReportsService } from "./reports.service";
-import { forwardRef, Inject } from "@nestjs/common";
+import { forwardRef, Inject, UseGuards } from "@nestjs/common";
+import { PrismaService } from "src/prisma/prisma.service";
+import { WsAuthGuard } from "src/auth/decorators/ws-auth.guard";
+import { WsAuthService } from '../auth/services/ws-auth.service';
 @WebSocketGateway({
   cors: {
     methods: ["GET", "POST"],
@@ -12,59 +20,102 @@ import { forwardRef, Inject } from "@nestjs/common";
 export class ReportsGateway {
   constructor(
     @Inject(forwardRef(() => ReportsService))
-    private readonly reportsService: ReportsService
+    private readonly reportsService: ReportsService,
+    private readonly prisma: PrismaService,
+    private readonly wsAuthService:WsAuthService
   ) {}
 
   @WebSocketServer()
   server: Server;
 
   async handleConnection(client: Socket) {
-    await this.sendInitialReports(client);
-    await this.sendInitialMetrics(client);
+    try {
+      await this.wsAuthService.authenticateClient(client);
+    } catch (e) {
+      console.error("Error en auth WS:", e.message);
+      client.emit("error", { type: "auth", message: "Autenticación inválida" });
+      client.disconnect();
+    }
   }
-
+  
   async notifyNewReport(report: Report) {
-    this.server.emit("newReport", report);
+    this.server.to("admins").emit("newReport", report);
+    this.server.to(`category_${report.categoryId}`).emit("newReport", report);
+
     await this.notifyReportMetrics();
   }
 
   async notifyReportUpdate(report: Report) {
-    this.server.emit("reportUpdate", report);
+    this.server.to("admins").emit("reportUpdate", report);
+    this.server
+      .to(`category_${report.categoryId}`)
+      .emit("reportUpdate", report);
+
     await this.notifyReportMetrics();
   }
 
   async notifyReportMetrics() {
-    const data = await this.reportsService.getMetrics();
-    this.server.emit("metrics", data);
+    try {
+      const globalMetrics = await this.reportsService.getGlobalMetrics();
+      this.server.to("admins").emit("metrics", globalMetrics);
+
+      const categories = await this.prisma.category.findMany({
+        select: { id: true },
+      });
+
+      await Promise.all(
+        categories.map(async (cat) => {
+          const metrics = await this.reportsService.getCategoryMetrics(cat.id);
+          this.server.to(`category_${cat.id}`).emit("metrics", metrics);
+        })
+      );
+    } catch (error) {
+      console.error("Error enviando métricas:", error.message);
+    }
   }
 
+  @UseGuards(WsAuthGuard)
   @SubscribeMessage("getInitialRecentReports")
   async sendInitialReports(@ConnectedSocket() client: Socket) {
+    const user = client.data.user;
     const today = new Date();
-    const reports = await this.reportsService.findAll({
-      year: today.getFullYear(),
-      month: today.getMonth() + 1,
-      day: today.getDate(),
-      limit: 100,
-      page: 1,
-    });
+
+    const reports = await this.reportsService.findAll(
+      {
+        year: today.getFullYear(),
+        month: today.getMonth() + 1,
+        day: today.getDate(),
+        limit: 100,
+        page: 1,
+      },
+      user
+    );
+
     client.emit("initialRecentReports", reports);
   }
 
+  @UseGuards(WsAuthGuard)
   @SubscribeMessage("getAnnualReports")
   async sendAnnualReports(@ConnectedSocket() client: Socket) {
+    const user = client.data.user;
+
     const today = new Date();
-    const reports = await this.reportsService.findAll({
-      year: today.getFullYear(),
-      limit: 100,
-      page: 1,
-    });
+
+    const reports = await this.reportsService.findAll(
+      {
+        year: today.getFullYear(),
+        limit: 100,
+        page: 1,
+      },
+      user
+    );
+
     client.emit("annualReports", reports);
   }
 
+  @UseGuards(WsAuthGuard)
   @SubscribeMessage("getInitialMetrics")
-  async sendInitialMetrics(@ConnectedSocket() client: Socket) {
-    const metrics = await this.reportsService.getMetrics();
-    client.emit("initialMetrics", metrics);
+  async sendInitialMetrics() {
+    await this.notifyReportMetrics();
   }
 }
