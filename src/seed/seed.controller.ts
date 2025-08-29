@@ -3,7 +3,7 @@ import { SeedService } from './seed.service';
 import { Auth } from 'src/auth/decorators/auth.decorator';
 import { UserRole } from 'src/users/interfaces/user.interfaces';
 
-@Auth(UserRole.ADMIN)
+// @Auth(UserRole.ADMIN)
 @Controller('seed')
 export class SeedController {
   constructor(private readonly seedService: SeedService) {}

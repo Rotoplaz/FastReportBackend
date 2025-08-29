@@ -31,7 +31,7 @@ export class AssignmentsService {
         throw new BadRequestException('Some worker IDs are invalid or not workers');
       }
 
-      const assignments = await this.prisma.asignment.createMany({
+      const assignments = await this.prisma.assignment.createMany({
         data: workerIds.map(workerId => ({
           reportId,
           workerId
@@ -54,8 +54,8 @@ export class AssignmentsService {
       throw new BadRequestException('Page must be greater than 0');
     }
 
-    const totalAssignments = await this.prisma.asignment.count();
-    const assignments = await this.prisma.asignment.findMany({
+    const totalAssignments = await this.prisma.assignment.count();
+    const assignments = await this.prisma.assignment.findMany({
       include: {
         report: {
           select: {
@@ -90,7 +90,7 @@ export class AssignmentsService {
   }
 
   async findOne(id: string) {
-    const assignment = await this.prisma.asignment.findUnique({
+    const assignment = await this.prisma.assignment.findUnique({
       where: { id },
       include: {
         report: {
@@ -125,7 +125,7 @@ export class AssignmentsService {
 
   async remove(id: string) {
     try {
-      const assignment = await this.prisma.asignment.findUnique({
+      const assignment = await this.prisma.assignment.findUnique({
         where: { id }
       });
 
@@ -133,7 +133,7 @@ export class AssignmentsService {
         throw new NotFoundException(`Assignment with ID ${id} not found`);
       }
 
-      await this.prisma.asignment.delete({
+      await this.prisma.assignment.delete({
         where: { id }
       });
 

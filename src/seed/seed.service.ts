@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import * as bcrypt from "bcrypt";
-import { Category, Priority, Report, Status, User } from "@prisma/client";
+import { Priority, Report, Status, User, Department } from "@prisma/client";
 import { ConfigService } from "@nestjs/config";
 
 @Injectable()
@@ -22,11 +22,11 @@ export class SeedService {
 
       const users = await this.createUsers();
 
-      const categories = await this.createCategories(users.supervisors);
+      const departments = await this.createDepartments(users.supervisors);
 
-      await this.assignWorkersToCategories(users.workers, categories);
+      await this.assignWorkersToDepartments(users.workers, departments);
 
-      const reports = await this.createReports(users.students, categories);
+      const reports = await this.createReports(users.students, departments);
 
       await this.createReportPhotos(reports);
 
@@ -37,7 +37,7 @@ export class SeedService {
       return {
         message: "SEED EXECUTED SUCCESSFULLY",
         users: users.count,
-        categories: categories.length,
+        departments: departments.length,
         reports: reports.length,
       };
     } catch (error) {
@@ -49,10 +49,10 @@ export class SeedService {
   private async cleanDatabase() {
     await this.prisma.evidenceImage.deleteMany();
     await this.prisma.evidence.deleteMany();
-    await this.prisma.asignment.deleteMany();
+    await this.prisma.assignment.deleteMany();
     await this.prisma.reportImage.deleteMany();
     await this.prisma.report.deleteMany();
-    await this.prisma.category.deleteMany();
+    await this.prisma.department.deleteMany();
     await this.prisma.user.deleteMany();
 
     return true;
@@ -126,8 +126,8 @@ export class SeedService {
     };
   }
 
-  private async createCategories(supervisors: any[]) {
-    const categoryNames = [
+  private async createDepartments(supervisors: User[]) {
+    const departmentNames = [
       {
         name: "Infraestructura",
         description: "Problemas relacionados con edificios e instalaciones",
@@ -144,36 +144,36 @@ export class SeedService {
       { name: "Áreas Comunes", description: "Problemas en áreas de uso común" },
     ];
 
-    const categories: Category[] = [];
+    const departments: Department[] = [];
 
-    for (let i = 0; i < categoryNames.length; i++) {
-      const category = await this.prisma.category.create({
+    for (let i = 0; i < departmentNames.length; i++) {
+      const department = await this.prisma.department.create({
         data: {
-          name: categoryNames[i].name,
-          description: categoryNames[i].description,
+          name: departmentNames[i].name,
+          description: departmentNames[i].description,
           supervisorId: supervisors[i].id,
         },
       });
-      categories.push(category);
+      departments.push(department);
     }
 
-    return categories;
+    return departments;
   }
 
-  private async assignWorkersToCategories(
+  private async assignWorkersToDepartments(
     workers: User[],
-    categories: Category[]
+    departments: Department[]
   ) {
     const updatedWorkers: User[] = [];
 
     for (const worker of workers) {
-      const randomCategory =
-        categories[Math.floor(Math.random() * categories.length)];
+      const randomDepartment =
+        departments[Math.floor(Math.random() * departments.length)];
 
       const updated = await this.prisma.user.update({
         where: { id: worker.id },
         data: {
-          categoryId: randomCategory.id,
+          departmentId: randomDepartment.id,
         },
       });
 
@@ -183,7 +183,7 @@ export class SeedService {
     return updatedWorkers;
   }
 
-  private async createReports(students: any[], categories: any[]) {
+  private async createReports(students: User[], departments: Department[]) {
     const reportTitles = [
       "Fuga de agua en baño",
       "Luz fundida en aula",
@@ -218,8 +218,8 @@ export class SeedService {
     for (let i = 0; i < 30; i++) {
       const randomStudent =
         students[Math.floor(Math.random() * students.length)];
-      const randomCategory =
-        categories[Math.floor(Math.random() * categories.length)];
+      const randomDepartment =
+        departments[Math.floor(Math.random() * departments.length)];
       const randomTitle =
         reportTitles[Math.floor(Math.random() * reportTitles.length)];
       const randomLocation =
@@ -232,7 +232,7 @@ export class SeedService {
       const report = await this.prisma.report.create({
         data: {
           studentId: randomStudent.id,
-          categoryId: randomCategory.id,
+          departmentId: randomDepartment.id,
           title: randomTitle,
           description: `Descripción detallada del problema: ${randomTitle} en ${randomLocation}. Este problema requiere atención.`,
           priority: randomPriority,
@@ -247,7 +247,7 @@ export class SeedService {
     return reports;
   }
 
-  private async createReportPhotos(reports: any[]) {
+  private async createReportPhotos(reports: Report[]) {
     const photoUrls = [
       "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg",
       "https://res.cloudinary.com/demo/image/upload/v1312461204/sample2.jpg",
@@ -273,7 +273,7 @@ export class SeedService {
     }
   }
 
-  private async createAssignments(reports: any[], workers: any[]) {
+  private async createAssignments(reports: Report[], workers: User[]) {
     const assignableReports = reports.filter(
       (report) =>
         report.status === "in_progress" || report.status === "completed"
@@ -282,7 +282,7 @@ export class SeedService {
     for (const report of assignableReports) {
       const randomWorker = workers[Math.floor(Math.random() * workers.length)];
 
-      await this.prisma.asignment.create({
+      await this.prisma.assignment.create({
         data: {
           reportId: report.id,
           workerId: randomWorker.id,
@@ -291,7 +291,7 @@ export class SeedService {
     }
   }
 
-  private async createEvidences(reports: any[]) {
+  private async createEvidences(reports: Report[]) {
     const completedReports = reports.filter(
       (report) => report.status === "completed"
     );

@@ -1,18 +1,18 @@
 import { Injectable, NotFoundException, ConflictException, InternalServerErrorException, BadRequestException } from '@nestjs/common';
-import { CreateCategoryDto } from './dto/create-category.dto';
-import { UpdateCategoryDto } from './dto/update-category.dto';
+import { CreateDepartmentDto } from './dto/create-department.dto';
+import { UpdateDepartmentDto } from './dto/update-department.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 @Injectable()
-export class CategoriesService {
+export class DepartmentsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(createCategoryDto: CreateCategoryDto) {
+  async create(createDepartmentDto: CreateDepartmentDto) {
     try {
-      const newCategory = await this.prisma.category.create({
-        data: createCategoryDto,
+      const newCategory = await this.prisma.department.create({
+        data: createDepartmentDto,
         include: {
           supervisor: {
             select: {
@@ -39,8 +39,8 @@ export class CategoriesService {
       throw new BadRequestException("El parametro page debe ser mayor a 0");
     }
 
-    const numberOfCategories = await this.prisma.category.count();
-    const categories = await this.prisma.category.findMany({
+    const numberOfCategories = await this.prisma.department.count();
+    const categories = await this.prisma.department.findMany({
       include: {
         supervisor: {
           select: {
@@ -66,7 +66,7 @@ export class CategoriesService {
   }
 
   async findOne(id: string) {
-    const category = await this.prisma.category.findUnique({
+    const category = await this.prisma.department.findUnique({
       where: { id },
       include: {
         supervisor: {
@@ -88,11 +88,11 @@ export class CategoriesService {
     return category;
   }
 
-  async update(id: string, updateCategoryDto: UpdateCategoryDto) {
+  async update(id: string, updateDepartmentDto: UpdateDepartmentDto) {
     try {
-      const updatedCategory = await this.prisma.category.update({
+      const updatedCategory = await this.prisma.department.update({
         where: { id },
-        data: updateCategoryDto,
+        data: updateDepartmentDto,
         include: {
           supervisor: {
             select: {
@@ -114,7 +114,7 @@ export class CategoriesService {
 
   async remove(id: string) {
     try {
-      await this.prisma.category.delete({
+      await this.prisma.department.delete({
         where: { id },
       });
 

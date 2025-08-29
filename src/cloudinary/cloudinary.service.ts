@@ -43,7 +43,6 @@ export class CloudinaryService {
     try {
       const publicId = extractPublicIdFromUrl(imageUrl);
       const result = await cloudinary.uploader.destroy(publicId);
-      console.log(publicId);
       return result.result === 'ok';
     } catch (error) {
       console.error('Error deleting image from Cloudinary:', error);

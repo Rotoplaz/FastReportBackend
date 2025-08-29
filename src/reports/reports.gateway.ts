@@ -40,7 +40,7 @@ export class ReportsGateway {
   
   async notifyNewReport(report: Report) {
     this.server.to("admins").emit("newReport", report);
-    this.server.to(`category_${report.categoryId}`).emit("newReport", report);
+    this.server.to(`department_${report.departmentId}`).emit("newReport", report);
 
     await this.notifyReportMetrics();
   }
@@ -48,7 +48,7 @@ export class ReportsGateway {
   async notifyReportUpdate(report: Report) {
     this.server.to("admins").emit("reportUpdate", report);
     this.server
-      .to(`category_${report.categoryId}`)
+      .to(`department_${report.departmentId}`)
       .emit("reportUpdate", report);
 
     await this.notifyReportMetrics();
@@ -59,14 +59,14 @@ export class ReportsGateway {
       const globalMetrics = await this.reportsService.getGlobalMetrics();
       this.server.to("admins").emit("metrics", globalMetrics);
 
-      const categories = await this.prisma.category.findMany({
+      const departments = await this.prisma.department.findMany({
         select: { id: true },
       });
 
       await Promise.all(
-        categories.map(async (cat) => {
-          const metrics = await this.reportsService.getCategoryMetrics(cat.id);
-          this.server.to(`category_${cat.id}`).emit("metrics", metrics);
+        departments.map(async (dep) => {
+          const metrics = await this.reportsService.getDepartmentMetrics(dep.id);
+          this.server.to(`department_${dep.id}`).emit("metrics", metrics);
         })
       );
     } catch (error) {
