@@ -50,17 +50,18 @@ export class ReportsGateway {
       );
       this.server.to("admins").emit("workers", workers);
     } else {
-      const category = await this.prisma.category.findFirst({
-        where: { id: user.Category.id },
+      const department = await this.prisma.department.findFirst({
+        where: { id: user.department.id },
       });
 
-      if ( !category ) return;
+      if ( !department ) return;
 
-      const workers = await this.usersService.getWorkersByCategory(
-        category.id
+      const workers = await this.usersService.getWorkersByDepartment(
+        department.id,
+        { limit: 100, page:1 }
       );
 
-      this.server.to(`category_${category.id}`).emit("workers", workers);
+      this.server.to(`department_${department.id}`).emit("workers", workers);
     }
   }
 }

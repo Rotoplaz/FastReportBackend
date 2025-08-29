@@ -5,7 +5,7 @@ import { PrismaModule } from "src/prisma/prisma.module";
 import { CloudinaryModule } from "src/cloudinary/cloudinary.module";
 import { ImagesModule } from "src/images/images.module";
 import { ReportsGateway } from "./reports.gateway";
-import { CategoriesModule } from "src/categories/categories.module";
+import { DepartmentsModule } from "src/departments/departments.module";
 import { AuthModule } from "src/auth/auth.module";
 
 @Module({
@@ -13,7 +13,7 @@ import { AuthModule } from "src/auth/auth.module";
     PrismaModule,
     CloudinaryModule,
     forwardRef(() => ImagesModule),
-    CategoriesModule,
+    DepartmentsModule,
     forwardRef(() => AuthModule),
   ],
   controllers: [ReportsController],

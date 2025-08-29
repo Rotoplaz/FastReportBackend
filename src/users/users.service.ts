@@ -13,6 +13,7 @@ import { PrismaService } from "src/prisma/prisma.service";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { FindUsersDto } from "./dto/find-users.dto";
 import { User, UserRole } from "@prisma/client";
+import { PaginationDto } from "../common/dto/pagination.dto";
 
 @Injectable()
 export class UsersService {
@@ -33,31 +34,73 @@ export class UsersService {
       this.handleErrors(error);
     }
   }
+  async getWorkersByDepartment(departmentId: string, paginationDto: PaginationDto) {
+    const { limit = 10, page = 1 } = paginationDto;
 
-  async getWorkersByCategory(categoryId: string) {
-    const workers = await this.prisma.category.findFirst({
-      where: { id: categoryId },
-      select: { workers: { omit: {password: true} } }
+    const where = {
+      role: UserRole.worker,
+      departmentId,
+    };
+
+    const workers = await this.prisma.user.findMany({
+      where,
+      take: limit,
+      skip: limit * (page - 1),
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        code: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+        workerDepartment: true,
+        department: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
     });
-    return workers;
+
+    const workersCount = await this.prisma.user.count({ where });
+
+    return {
+      limit,
+      page,
+      numberOfPages: Math.ceil(workersCount / limit),
+      count: workersCount,
+      data: workers,
+    };
   }
 
   async findAll(findUsersDto: FindUsersDto, user: User) {
     const { limit = 10, page = 0 } = findUsersDto;
 
-    
     if (user.role !== UserRole.admin) {
       return new ForbiddenException("Auth error");
-    } 
-    
+    }
+
     const where = {
-        role: {
-          in: [UserRole.supervisor, UserRole.worker],
-        },
-      };
+      role: {
+        in: [UserRole.supervisor, UserRole.worker],
+      },
+    };
 
     const users = await this.prisma.user.findMany({
       where: { ...where },
+      include: {
+        workerDepartment: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        department: true
+      },
+      omit: { password: true, departmentId: true },
       take: limit,
       skip: limit * (page - 1),
     });

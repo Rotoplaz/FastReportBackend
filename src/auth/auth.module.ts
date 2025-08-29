@@ -19,7 +19,7 @@ import { WsAuthService } from './services/ws-auth.service';
         return {
           secret: configService.get('JWT_SECRET'),
           signOptions: {
-            expiresIn:'4h'
+            expiresIn:'24h'
           }
         }
       }

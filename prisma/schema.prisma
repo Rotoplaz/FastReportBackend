@@ -20,6 +20,18 @@ enum UserRole {
   supervisor
 }
 
+model Department {
+  id           String   @id @default(uuid())
+  name         String   @unique
+  description  String
+  supervisor   User     @relation(fields: [supervisorId], references: [id])
+  supervisorId String   @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  reports      Report[]
+  workers      User[]   @relation("DepartmentWorkers")
+}
+
 model User {
   id             String      @id @default(uuid())
   firstName      String
@@ -30,23 +42,11 @@ model User {
   role           UserRole
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
-  Category       Category?
-  categoryId     String?
-  workerCategory Category?   @relation("CategoryWorkers", fields: [categoryId], references: [id])
-  Report         Report[]
-  Asignment      Asignment[]
-}
-
-model Category {
-  id           String   @id @default(uuid())
-  name         String   @unique
-  description  String
-  supervisor   User     @relation(fields: [supervisorId], references: [id])
-  supervisorId String   @unique
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  Report       Report[]
-  workers      User[]   @relation("CategoryWorkers")
+  department     Department?
+  departmentId   String?
+  workerDepartment     Department? @relation("DepartmentWorkers", fields: [departmentId], references: [id])
+  reports        Report[]
+  assignments    Assignment[]
 }
 
 enum Priority {
@@ -64,8 +64,8 @@ enum Status {
 model Report {
   id          String        @id @default(uuid())
   student     User          @relation(fields: [studentId], references: [id])
-  category    Category      @relation(fields: [categoryId], references: [id])
-  categoryId  String
+  department    Department      @relation(fields: [departmentId], references: [id])
+  departmentId  String
   studentId   String
   title       String
   description String
@@ -75,7 +75,7 @@ model Report {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   images      ReportImage[]
-  Asignment   Asignment[]
+  assignment   Assignment[]
   Evidence    Evidence[]
 }
 
@@ -88,7 +88,7 @@ model ReportImage {
   updatedAt DateTime @updatedAt
 }
 
-model Asignment {
+model Assignment {
   id        String   @id @default(uuid())
   report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
   reportId  String

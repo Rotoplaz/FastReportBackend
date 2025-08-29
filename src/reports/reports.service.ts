@@ -15,7 +15,7 @@ import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { ImagesService } from "src/images/images.service";
 import { ReportsGateway } from "./reports.gateway";
 import { User } from "@prisma/client";
-import { CategoriesService } from "src/categories/categories.service";
+import { DepartmentsService } from "src/departments/departments.service";
 import { dateQueryBuilder } from "./utils/date-query-builder";
 import { FindReportsDto } from "./dto/find-report.dto";
 
@@ -26,7 +26,7 @@ export class ReportsService {
     private readonly imagesService: ImagesService,
     @Inject(forwardRef(() => ReportsGateway))
     private readonly reportsGateway: ReportsGateway,
-    private readonly categoriesService: CategoriesService
+    private readonly departmentsService: DepartmentsService
   ) {}
 
   async create(
@@ -35,10 +35,10 @@ export class ReportsService {
     files?: Express.Multer.File[]
   ) {
     try {
-      await this.categoriesService.findOne(createReportDto.categoryId);
+      await this.departmentsService.findOne(createReportDto.departmentId);
 
       const newReport = await this.prisma.report.create({
-        data: { ...createReportDto, studentId: user.id },
+        data: { ...createReportDto, studentId: user.id  },
         include: {
           student: {
             select: {
@@ -49,7 +49,7 @@ export class ReportsService {
               role: true,
             },
           },
-          category: {
+          department: {
             select: {
               id: true,
               name: true,
@@ -90,21 +90,21 @@ export class ReportsService {
 
     const dateFilter = dateQueryBuilder(date);
 
-    let categoryFilter = {};
+    let departmentFilter = {};
     if (user.role === "supervisor") {
-      const supervisorCategory = await this.prisma.category.findFirst({
+      const supervisorDepartment = await this.prisma.department.findFirst({
         where: { supervisorId: user.id },
       });
-      categoryFilter = { categoryId: supervisorCategory?.id };
+      departmentFilter = { departmentId: supervisorDepartment?.id };
     }
 
 
     const totalCount = await this.prisma.report.count({
-      where: { ...dateFilter, status, ...categoryFilter },
+      where: { ...dateFilter, status, ...departmentFilter },
     });
 
     const reports = await this.prisma.report.findMany({
-      where: { ...dateFilter, status, ...categoryFilter },
+      where: { ...dateFilter, status, ...departmentFilter },
       include: {
         student: {
           select: {
@@ -115,7 +115,7 @@ export class ReportsService {
             role: true,
           },
         },
-        category: {
+        department: {
           select: {
             id: true,
             name: true,
@@ -155,7 +155,7 @@ export class ReportsService {
             role: true,
           },
         },
-        category: {
+        department: {
           select: {
             id: true,
             name: true,
@@ -214,7 +214,7 @@ export class ReportsService {
               role: true,
             },
           },
-          category: {
+          department: {
             select: {
               id: true,
               name: true,
@@ -254,28 +254,29 @@ export class ReportsService {
     }
   }
 
-  async getCategoryMetrics(categoryId: string) {
+  async getDepartmentMetrics(departmentId: string) {
     try {
-      const category = await this.prisma.category.findFirst({where: { id: categoryId } });
+      const department = await this.prisma.department.findFirst({where: { id: departmentId } });
       
-      const totalReportsPromise = this.prisma.report.count({ where: {categoryId: category?.id} });
+      const totalReportsPromise = this.prisma.report.count({ where: {departmentId: department?.id} });
+
       const reportsCompletedPromise = this.prisma.report.count({
-        where: { status: "completed", categoryId: category?.id },
+        where: { status: "completed", departmentId: department?.id },
       });
       const reportsPendingPromise = this.prisma.report.count({
-        where: { status: "pending", categoryId: category?.id },
+        where: { status: "pending", departmentId: department?.id },
       });
       const reportsInProgressPromise = this.prisma.report.count({
-        where: { status: "in_progress", categoryId: category?.id },
+        where: { status: "in_progress", departmentId: department?.id },
       });
       const highPriorityReportsPromise = this.prisma.report.count({
-        where: { priority: "high", categoryId: category?.id },
+        where: { priority: "high", departmentId: department?.id },
       });
       const lowPriorityReportsPromise = this.prisma.report.count({
-        where: { priority: "low", categoryId: category?.id },
+        where: { priority: "low", departmentId: department?.id },
       });
       const mediumPriorityReportsPromise = this.prisma.report.count({
-        where: { priority: "medium", categoryId: category?.id },
+        where: { priority: "medium", departmentId: department?.id },
       });
 
       const [
