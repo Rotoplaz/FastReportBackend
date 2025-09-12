@@ -7,7 +7,7 @@ import { Auth } from 'src/auth/decorators/auth.decorator';
 import { UserRole } from 'src/users/interfaces/user.interfaces';
 
 @Auth(UserRole.ADMIN)
-@Controller('categories')
+@Controller('departments')
 export class DepartmentsController {
   constructor(private readonly departmentsService: DepartmentsService) {}
 
