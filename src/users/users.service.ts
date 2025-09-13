@@ -5,6 +5,8 @@ import {
   InternalServerErrorException,
   BadRequestException,
   ForbiddenException,
+  forwardRef,
+  Inject,
 } from "@nestjs/common";
 import { CreateUserDto } from "./dto/create-user.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
@@ -14,20 +16,35 @@ import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { FindUsersDto } from "./dto/find-users.dto";
 import { User, UserRole } from "@prisma/client";
 import { PaginationDto } from "../common/dto/pagination.dto";
+import { UsersGateway } from "./users.gateway";
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject(forwardRef(() => UsersGateway))
+    private usersGateway: UsersGateway,
+  ) {}
 
-  async create(createUserDto: CreateUserDto) {
+  async create(createUserDto: CreateUserDto, user: User) {
     const hashPasword = bcrypt.hashSync(createUserDto.password, 10);
     try {
-      const { password, ...newUser } = await this.prisma.user.create({
+      const newUser = await this.prisma.user.create({
         data: {
           ...createUserDto,
           password: hashPasword,
         },
+        include: {
+          department: true,
+          workerDepartment: true
+        },
+        omit: {
+          departmentId: true,
+          password: true,
+        }
       });
+
+      this.usersGateway.notifyNewWorker(newUser, user);
 
       return newUser;
     } catch (error) {
@@ -133,7 +150,7 @@ export class UsersService {
 
   async update(id: string, updateUserDto: UpdateUserDto) {
     try {
-      const updatedUser = await this.prisma.user.update({
+      const {password,...updatedUser} = await this.prisma.user.update({
         where: { id },
         data: updateUserDto,
       });

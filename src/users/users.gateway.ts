@@ -10,6 +10,7 @@ import { WsAuthService } from "src/auth/services/ws-auth.service";
 import { forwardRef, Inject, UseGuards } from "@nestjs/common";
 import { Server, Socket } from "socket.io";
 import { WsAuthGuard } from "src/auth/decorators/ws-auth.guard";
+import { User } from "@prisma/client";
 
 @WebSocketGateway({
   cors: {
@@ -17,7 +18,7 @@ import { WsAuthGuard } from "src/auth/decorators/ws-auth.guard";
   },
   namespace: "workers",
 })
-export class ReportsGateway {
+export class UsersGateway {
   constructor(
     @Inject(forwardRef(() => UsersService))
     private readonly usersService: UsersService,
@@ -36,6 +37,12 @@ export class ReportsGateway {
       client.emit("error", { type: "auth", message: "Autenticación inválida" });
       client.disconnect();
     }
+  }
+
+  async notifyNewWorker(newWorker: Partial<User>, user: User) {
+
+    this.server.to("admins").emit("newWorker", newWorker);
+    this.server.to(`department_${user.departmentId}`).emit("newWorker", newWorker);
   }
 
   @UseGuards(WsAuthGuard)
