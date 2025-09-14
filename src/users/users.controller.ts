@@ -1,15 +1,24 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
-import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { Auth } from 'src/auth/decorators/auth.decorator';
-import { UserRole } from './interfaces/user.interfaces';
-import { FindUsersDto } from './dto/find-users.dto';
-import { GetUser } from 'src/auth/decorators/get-user.decorator';
-import { User } from '@prisma/client';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+} from "@nestjs/common";
+import { UsersService } from "./users.service";
+import { CreateUserDto } from "./dto/create-user.dto";
+import { UpdateUserDto } from "./dto/update-user.dto";
+import { Auth } from "src/auth/decorators/auth.decorator";
+import { UserRole } from "./interfaces/user.interfaces";
+import { FindUsersDto } from "./dto/find-users.dto";
+import { GetUser } from "src/auth/decorators/get-user.decorator";
+import { User } from "@prisma/client";
 
 @Auth(UserRole.ADMIN, UserRole.SUPERVISOR)
-@Controller('users')
+@Controller("users")
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
@@ -23,18 +32,23 @@ export class UsersController {
     return this.usersService.findAll(findUsersDto, user);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
+  @Get(":id")
+  findOne(@Param("id") id: string) {
     return this.usersService.findOne(id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+  @Patch(":id")
+  update(@Param("id") id: string, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(id, updateUserDto);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
+  @Auth(UserRole.ADMIN)
+  @Delete("batch")
+  removeMany(@Body() ids: string[], @GetUser() user: User) {
+    return this.usersService.removeMany(ids, user);
+  }
+  @Delete(":id")
+  remove(@Param("id") id: string) {
     return this.usersService.remove(id);
   }
 }

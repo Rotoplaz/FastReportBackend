@@ -173,7 +173,7 @@ export class SeedService {
       const updated = await this.prisma.user.update({
         where: { id: worker.id },
         data: {
-          departmentId: randomDepartment.id,
+          workerDepartmentId: randomDepartment.id,
         },
       });
 
@@ -182,7 +182,6 @@ export class SeedService {
 
     return updatedWorkers;
   }
-
   private async createReports(students: User[], departments: Department[]) {
     const reportTitles = [
       "Fuga de agua en baño",
