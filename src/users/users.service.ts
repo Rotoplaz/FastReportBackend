@@ -23,7 +23,7 @@ export class UsersService {
   constructor(
     private prisma: PrismaService,
     @Inject(forwardRef(() => UsersGateway))
-    private usersGateway: UsersGateway,
+    private usersGateway: UsersGateway
   ) {}
 
   async create(createUserDto: CreateUserDto, user: User) {
@@ -35,23 +35,32 @@ export class UsersService {
           password: hashPasword,
         },
         include: {
-          department: true,
-          workerDepartment: true
+          supervisesDepartment: true,
+          workerDepartment: true,
         },
         omit: {
-          departmentId: true,
+          workerDepartmentId: true,
           password: true,
-        }
+        },
       });
 
-      this.usersGateway.notifyNewWorker(newUser, user);
+      const department = await this.prisma.department.findUnique({
+        where: { supervisorId: user.id },
+        select: { id: true },
+      });
+
+
+      this.usersGateway.notifyNewWorker(newUser, department?.id || "");
 
       return newUser;
     } catch (error) {
       this.handleErrors(error);
     }
   }
-  async getWorkersByDepartment(departmentId: string, paginationDto: PaginationDto) {
+  async getWorkersByDepartment(
+    departmentId: string,
+    paginationDto: PaginationDto
+  ) {
     const { limit = 10, page = 1 } = paginationDto;
 
     const where = {
@@ -73,7 +82,7 @@ export class UsersService {
         createdAt: true,
         updatedAt: true,
         workerDepartment: true,
-        department: {
+        supervisesDepartment: {
           select: {
             id: true,
             name: true,
@@ -115,9 +124,9 @@ export class UsersService {
             name: true,
           },
         },
-        department: true
+        supervisesDepartment: true,
       },
-      omit: { password: true, departmentId: true },
+      omit: { password: true, workerDepartmentId: true },
       take: limit,
       skip: limit * (page - 1),
     });
@@ -150,7 +159,7 @@ export class UsersService {
 
   async update(id: string, updateUserDto: UpdateUserDto) {
     try {
-      const {password,...updatedUser} = await this.prisma.user.update({
+      const { password, ...updatedUser } = await this.prisma.user.update({
         where: { id },
         data: updateUserDto,
       });
@@ -171,6 +180,24 @@ export class UsersService {
     } catch (error) {
       this.handleErrors(error, id);
     }
+  }
+
+  async removeMany(ids: string[], user: User) {
+    const workers = await this.prisma.user.findMany({
+      where: {
+        id: { in: ids },
+      },
+    });
+
+    const deletePromises = workers.map((worker) =>
+      this.prisma.user.delete({ where: { id: worker.id } })
+    );
+
+    await this.prisma.$transaction([...deletePromises]);
+
+    return {
+      message: `${workers.length} trabajadores eliminados correctamente.`,
+    };
   }
 
   handleErrors(error: any, id?: string) {

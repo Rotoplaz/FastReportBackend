@@ -14,6 +14,7 @@ import { User } from "@prisma/client";
 
 @WebSocketGateway({
   cors: {
+    origin: "*",
     methods: ["GET", "POST"],
   },
   namespace: "workers",
@@ -39,10 +40,10 @@ export class UsersGateway {
     }
   }
 
-  async notifyNewWorker(newWorker: Partial<User>, user: User) {
+  async notifyNewWorker(newWorker: Partial<User>, departmentId: string) {
 
     this.server.to("admins").emit("newWorker", newWorker);
-    this.server.to(`department_${user.departmentId}`).emit("newWorker", newWorker);
+    this.server.to(`department_${departmentId}`).emit("newWorker", newWorker);
   }
 
   @UseGuards(WsAuthGuard)

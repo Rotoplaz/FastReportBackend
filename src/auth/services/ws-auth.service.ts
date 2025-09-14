@@ -21,7 +21,7 @@ export class WsAuthService {
 
     const user = await this.prisma.user.findUnique({
       where: { id: payload.id },
-      include: { department: true },
+      include: { supervisesDepartment: true },
     });
 
     if (!user) throw new Error("Usuario no encontrado en DB");
@@ -29,8 +29,8 @@ export class WsAuthService {
     client.data.user = user;
     client.emit("authenticated");
 
-    if (user.role === "supervisor" && user.department) {
-      client.join(`department_${user.department.id}`);
+    if (user.role === "supervisor" && user.supervisesDepartment) {
+      client.join(`department_${user.supervisesDepartment.id}`);
     } else if (user.role === "admin") {
       client.join("admins");
     }

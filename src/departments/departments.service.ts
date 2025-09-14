@@ -1,9 +1,15 @@
-import { Injectable, NotFoundException, ConflictException, InternalServerErrorException, BadRequestException } from '@nestjs/common';
-import { CreateDepartmentDto } from './dto/create-department.dto';
-import { UpdateDepartmentDto } from './dto/update-department.dto';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  InternalServerErrorException,
+  BadRequestException,
+} from "@nestjs/common";
+import { CreateDepartmentDto } from "./dto/create-department.dto";
+import { UpdateDepartmentDto } from "./dto/update-department.dto";
+import { PrismaService } from "src/prisma/prisma.service";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import { PaginationDto } from "src/common/dto/pagination.dto";
 
 @Injectable()
 export class DepartmentsService {
@@ -20,10 +26,13 @@ export class DepartmentsService {
               firstName: true,
               lastName: true,
               email: true,
-              role: true
-            }
-          }
-        }
+              role: true,
+            },
+          },
+        },
+        omit: {
+          supervisorId: true,
+        },
       });
 
       return newCategory;
@@ -34,7 +43,7 @@ export class DepartmentsService {
 
   async findAll(paginationDto: PaginationDto) {
     const { limit, page } = paginationDto;
-    
+
     if (page <= 0) {
       throw new BadRequestException("El parametro page debe ser mayor a 0");
     }
@@ -48,20 +57,23 @@ export class DepartmentsService {
             firstName: true,
             lastName: true,
             email: true,
-            role: true
-          }
-        }
+            role: true,
+          },
+        },
       },
       take: limit,
       skip: limit * (page - 1),
+      omit: {
+        supervisorId: true,
+      },
     });
 
     return {
-      limit, 
+      limit,
       page,
       numberOfPages: Math.ceil(numberOfCategories / limit),
       count: numberOfCategories,
-      data: categories
+      data: categories,
     };
   }
 
@@ -75,10 +87,10 @@ export class DepartmentsService {
             firstName: true,
             lastName: true,
             email: true,
-            role: true
-          }
-        }
-      }
+            role: true,
+          },
+        },
+      },
     });
 
     if (!category) {
@@ -100,10 +112,10 @@ export class DepartmentsService {
               firstName: true,
               lastName: true,
               email: true,
-              role: true
-            }
-          }
-        }
+              role: true,
+            },
+          },
+        },
       });
 
       return updatedCategory;
@@ -126,26 +138,32 @@ export class DepartmentsService {
 
   handleErrors(error: any, id?: string) {
     if (!(error instanceof PrismaClientKnownRequestError)) {
-      if (error.message.includes('Argument `data` is missing.')) {
-        throw new BadRequestException('El cuerpo de la solicitud no puede estar vacío');
+      if (error.message.includes("Argument `data` is missing.")) {
+        throw new BadRequestException(
+          "El cuerpo de la solicitud no puede estar vacío"
+        );
       }
-      throw new InternalServerErrorException('Error inesperado');
+      throw new InternalServerErrorException("Error inesperado");
     }
 
     switch (error.code) {
-      case 'P2002':
+      case "P2002":
         const target = error.meta?.target as string[];
 
-        if (target.includes('name')) {
-          throw new ConflictException('El nombre de la categoría ya está en uso');
-        } else if (target.includes('supervisorId')) {
-          throw new ConflictException('El supervisor ya está asignado a otra categoría');
+        if (target.includes("name")) {
+          throw new ConflictException(
+            "El nombre de la categoría ya está en uso"
+          );
+        } else if (target.includes("supervisorId")) {
+          throw new ConflictException(
+            "El supervisor ya está asignado a otra categoría"
+          );
         }
         break;
-      case 'P2025':
+      case "P2025":
         throw new NotFoundException(`Categoría con ID ${id} no encontrada`);
-      case 'P2003':
-        throw new ConflictException('El supervisor especificado no existe');
+      case "P2003":
+        throw new ConflictException("El supervisor especificado no existe");
       default:
         throw new InternalServerErrorException();
     }

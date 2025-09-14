@@ -24,8 +24,8 @@ model Department {
   id           String   @id @default(uuid())
   name         String   @unique
   description  String
-  supervisor   User     @relation(fields: [supervisorId], references: [id])
-  supervisorId String   @unique
+  supervisor   User?    @relation("SupervisorDepartment", fields: [supervisorId], references: [id], onDelete: SetNull)
+  supervisorId String?  @unique
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   reports      Report[]
@@ -33,20 +33,20 @@ model Department {
 }
 
 model User {
-  id             String      @id @default(uuid())
-  firstName      String
-  lastName       String
-  email          String      @unique
-  code           String      @unique
-  password       String
-  role           UserRole
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-  department     Department?
-  departmentId   String?
-  workerDepartment     Department? @relation("DepartmentWorkers", fields: [departmentId], references: [id])
-  reports        Report[]
-  assignments    Assignment[]
+  id                   String       @id @default(uuid())
+  firstName            String
+  lastName             String
+  email                String       @unique
+  code                 String       @unique
+  password             String
+  role                 UserRole
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  supervisesDepartment Department?  @relation("SupervisorDepartment")
+  workerDepartmentId   String?
+  workerDepartment     Department?  @relation("DepartmentWorkers", fields: [workerDepartmentId], references: [id])
+  reports              Report[]
+  assignments          Assignment[]
 }
 
 enum Priority {
@@ -62,21 +62,21 @@ enum Status {
 }
 
 model Report {
-  id          String        @id @default(uuid())
-  student     User          @relation(fields: [studentId], references: [id])
-  department    Department      @relation(fields: [departmentId], references: [id])
-  departmentId  String
-  studentId   String
-  title       String
-  description String
-  priority    Priority
-  status      Status
-  location    String
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  images      ReportImage[]
+  id           String        @id @default(uuid())
+  student      User          @relation(fields: [studentId], references: [id])
+  department   Department    @relation(fields: [departmentId], references: [id])
+  departmentId String
+  studentId    String
+  title        String
+  description  String
+  priority     Priority
+  status       Status
+  location     String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  images       ReportImage[]
   assignment   Assignment[]
-  Evidence    Evidence[]
+  Evidence     Evidence[]
 }
 
 model ReportImage {
