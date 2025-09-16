@@ -46,6 +46,12 @@ export class UsersGateway {
     this.server.to(`department_${departmentId}`).emit("newWorker", newWorker);
   }
 
+  async notifyOnDeleteWorkers(ids: string[], departmentId: string) {
+
+    this.server.to("admins").emit("deleteWorkers", ids);
+    this.server.to(`department_${departmentId}`).emit("deleteWorkers", ids);
+  }
+
   @UseGuards(WsAuthGuard)
   @SubscribeMessage("getWorkers")
   async emitWorkers(@ConnectedSocket() client: Socket) {
