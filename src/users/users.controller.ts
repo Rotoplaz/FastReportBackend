@@ -32,7 +32,7 @@ export class UsersController {
     return this.usersService.findAll(findUsersDto, user);
   }
 
-  @Auth(UserRole.ADMIN, UserRole.SUPERVISOR)
+  @Auth(UserRole.ADMIN)
   @Get("unassigned")
   getUnassignedWorkersAndSupervisors() {
     return this.usersService.getUnassignedWorkersAndSupervisors();

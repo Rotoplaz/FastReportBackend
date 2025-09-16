@@ -5,7 +5,7 @@ import { UpdateDepartmentDto } from './dto/update-department.dto';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { Auth } from 'src/auth/decorators/auth.decorator';
 import { UserRole } from 'src/users/interfaces/user.interfaces';
-
+import { RemoveManyDepartmentsDto } from './dto/delete-many.dto';
 @Auth(UserRole.ADMIN)
 @Controller('departments')
 export class DepartmentsController {
@@ -21,6 +21,7 @@ export class DepartmentsController {
     return this.departmentsService.findAll(paginationDto);
   }
 
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.departmentsService.findOne(id);
@@ -29,6 +30,11 @@ export class DepartmentsController {
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateCategoryDto: UpdateDepartmentDto) {
     return this.departmentsService.update(id, updateCategoryDto);
+  }
+
+  @Delete('batch')
+  removeMany(@Body() body: RemoveManyDepartmentsDto){
+    return this.departmentsService.removeMany(body.ids);
   }
 
   @Delete(':id')
