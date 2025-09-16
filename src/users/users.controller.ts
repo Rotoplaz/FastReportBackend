@@ -32,6 +32,12 @@ export class UsersController {
     return this.usersService.findAll(findUsersDto, user);
   }
 
+  @Auth(UserRole.ADMIN, UserRole.SUPERVISOR)
+  @Get("unassigned")
+  getUnassignedWorkersAndSupervisors() {
+    return this.usersService.getUnassignedWorkersAndSupervisors();
+  }
+
   @Get(":id")
   findOne(@Param("id") id: string) {
     return this.usersService.findOne(id);
@@ -47,6 +53,7 @@ export class UsersController {
   removeMany(@Body() ids: string[], @GetUser() user: User) {
     return this.usersService.removeMany(ids, user);
   }
+
   @Delete(":id")
   remove(@Param("id") id: string) {
     return this.usersService.remove(id);

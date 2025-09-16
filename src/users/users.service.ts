@@ -49,7 +49,6 @@ export class UsersService {
         select: { id: true },
       });
 
-
       this.usersGateway.notifyNewWorker(newUser, department?.id || "");
 
       return newUser;
@@ -183,21 +182,50 @@ export class UsersService {
   }
 
   async removeMany(ids: string[], user: User) {
-    const workers = await this.prisma.user.findMany({
-      where: {
-        id: { in: ids },
-      },
-    });
+    try {
+      const department = await this.prisma.department.findFirst({
+        where: { supervisorId: user.id },
+      });
+      const workers = await this.prisma.user.findMany({
+        where: {
+          id: { in: ids },
+        },
+      });
 
-    const deletePromises = workers.map((worker) =>
-      this.prisma.user.delete({ where: { id: worker.id } })
-    );
+      const deletePromises = workers.map((worker) =>
+        this.prisma.user.delete({ where: { id: worker.id } })
+      );
 
-    await this.prisma.$transaction([...deletePromises]);
+      await this.prisma.$transaction([...deletePromises]);
+      this.usersGateway.notifyOnDeleteWorkers(ids, department?.id || "");
+      return {
+        message: `${workers.length} trabajadores eliminados correctamente.`,
+      };
+    } catch (error) {
+      return new InternalServerErrorException();
+    }
+  }
 
-    return {
-      message: `${workers.length} trabajadores eliminados correctamente.`,
-    };
+  async getUnassignedWorkersAndSupervisors() {
+    try {
+      const workers = await this.prisma.user.findMany({
+        where: {
+          role: { in: ["worker", "supervisor"] },
+          workerDepartmentId: null, 
+          supervisesDepartment: null
+        },
+        select: {
+          firstName: true,
+          lastName: true,
+          role: true,
+          id: true
+        }
+      });
+
+      return workers;
+    } catch (error) {
+      return new InternalServerErrorException();
+    }
   }
 
   handleErrors(error: any, id?: string) {
