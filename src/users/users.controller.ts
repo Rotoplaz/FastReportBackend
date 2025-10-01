@@ -16,6 +16,7 @@ import { UserRole } from "./interfaces/user.interfaces";
 import { FindUsersDto } from "./dto/find-users.dto";
 import { GetUser } from "src/auth/decorators/get-user.decorator";
 import { User } from "@prisma/client";
+import { UpdateUserRoleDto } from "./dto/update-user-role";
 
 @Auth(UserRole.ADMIN, UserRole.SUPERVISOR)
 @Controller("users")
@@ -44,8 +45,12 @@ export class UsersController {
   }
 
   @Patch(":id")
-  update(@Param("id") id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(id, updateUserDto);
+  update(@Param("id") id: string, @Body() updateUserDto: UpdateUserDto, @GetUser() user: User) {
+    return this.usersService.update(id, updateUserDto, user);
+  }
+  @Patch(":id/update-user-role")
+  updateUserRole(@Param("id") id: string, @Body() updateUserRoleDto: UpdateUserRoleDto, @GetUser() user: User) {
+    return this.usersService.updateUserRole(id, updateUserRoleDto, user);
   }
 
   @Auth(UserRole.ADMIN)

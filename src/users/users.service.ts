@@ -17,6 +17,7 @@ import { FindUsersDto } from "./dto/find-users.dto";
 import { User, UserRole } from "@prisma/client";
 import { PaginationDto } from "../common/dto/pagination.dto";
 import { UsersGateway } from "./users.gateway";
+import { UpdateUserRoleDto } from "./dto/update-user-role";
 
 @Injectable()
 export class UsersService {
@@ -56,6 +57,36 @@ export class UsersService {
       this.handleErrors(error);
     }
   }
+
+  async findWorker(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        code: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+        workerDepartment: true,
+        supervisesDepartment: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
+    }
+
+    return user;
+  }
+
   async getWorkersByDepartment(
     departmentId: string,
     paginationDto: PaginationDto
@@ -64,11 +95,10 @@ export class UsersService {
 
     const where = {
       role: UserRole.worker,
-      departmentId,
     };
 
     const workers = await this.prisma.user.findMany({
-      where,
+      where: { ...where, workerDepartmentId: departmentId },
       take: limit,
       skip: limit * (page - 1),
       select: {
@@ -156,16 +186,79 @@ export class UsersService {
     return user;
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto) {
+  async update(id: string, updateUserDto: UpdateUserDto, user: User) {
+    const { departmentId, ...data } = updateUserDto;
     try {
-      const { password, ...updatedUser } = await this.prisma.user.update({
+      const oldUser = await this.findWorker(id);
+
+      const updatedUser = await this.prisma.user.update({
         where: { id },
-        data: updateUserDto,
+        data: { ...data, workerDepartmentId: departmentId },
+        include: {
+          supervisesDepartment: true,
+          workerDepartment: true,
+        },
+        omit: {
+          workerDepartmentId: true,
+          password: true,
+        },
       });
+
+      const oldDepartmentId = oldUser.workerDepartment?.id || "";
+      const newDepartmentId = updatedUser.workerDepartment?.id || "";
+
+      this.usersGateway.notifyOnUpdateWorker(updatedUser, [
+        oldDepartmentId,
+        newDepartmentId,
+      ]);
 
       return updatedUser;
     } catch (error) {
+      console.log(error);
       this.handleErrors(error, id);
+    }
+  }
+
+  async updateUserRole(id: string, { role }: UpdateUserRoleDto, user: User) {
+    if (user.role !== UserRole.admin) {
+      throw new ForbiddenException(
+        "No tienes permisos para cambiar roles de usuario."
+      );
+    }
+
+    try {
+      const userToUpdate = await this.prisma.user.findUnique({
+        where: { id },
+        include: {
+          supervisesDepartment: true,
+        },
+      });
+
+      if (!userToUpdate) {
+        throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
+      }
+
+      if (userToUpdate.supervisesDepartment) {
+        await this.prisma.department.update({
+          where: { id: userToUpdate.supervisesDepartment.id },
+          data: { supervisorId: null },
+        });
+      }
+
+      const updatedUser = await this.prisma.user.update({
+        where: { id },
+        data: {
+          role,
+          workerDepartmentId: null,
+        },
+        omit: { password: true },
+      });
+
+
+      this.usersGateway.notifyOnUpdateWorker(updatedUser);
+      return updatedUser;
+    } catch (error) {
+      throw new InternalServerErrorException();
     }
   }
 
@@ -211,15 +304,26 @@ export class UsersService {
       const workers = await this.prisma.user.findMany({
         where: {
           role: { in: ["worker", "supervisor"] },
-          workerDepartmentId: null, 
-          supervisesDepartment: null
+          workerDepartmentId: null,
+          supervisesDepartment: null,
         },
         select: {
+          id: true,
           firstName: true,
           lastName: true,
+          email: true,
+          code: true,
           role: true,
-          id: true
-        }
+          createdAt: true,
+          updatedAt: true,
+          workerDepartment: true,
+          supervisesDepartment: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
       });
 
       return workers;

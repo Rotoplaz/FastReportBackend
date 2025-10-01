@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
 } from "@nestjs/common";
 import { CreateDepartmentDto } from "./dto/create-department.dto";
 import { UpdateDepartmentDto } from "./dto/update-department.dto";
@@ -121,20 +122,34 @@ export class DepartmentsService {
     return { message: `Categoría con ID ${id} eliminada correctamente` };
   }
 
+
   async removeMany(ids: string[]) {
+    
     const count = await this.prisma.department.count({
+      where: { id: { in: ids } },
+    });
+
+    if (count !== ids.length) {
+      throw new NotFoundException(
+        "Alguno(s) de los departamentos no existe(n)."
+      );
+    }
+
+    const associatedReportsCount = await this.prisma.report.count({
       where: {
-        id: {
+        departmentId: {
           in: ids,
         },
       },
     });
 
-    if (count !== ids.length) {
-      throw new NotFoundException(
-        "Alguno(s) de los departamentos no existe(n)"
+    if (associatedReportsCount > 0) {
+      throw new ConflictException(
+        "No se pueden eliminar porque uno o más departamentos tienen reportes asociados."
       );
     }
+
+
     await this.prisma.department.deleteMany({
       where: {
         id: {
@@ -142,5 +157,8 @@ export class DepartmentsService {
         },
       },
     });
+
+    return { message: `${ids.length} departamento(s) eliminado(s) correctamente.` };
   }
+
 }

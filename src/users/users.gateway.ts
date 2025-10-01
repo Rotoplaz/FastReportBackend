@@ -65,7 +65,7 @@ export class UsersGateway {
       this.server.to("admins").emit("workers", workers);
     } else {
       const department = await this.prisma.department.findFirst({
-        where: { id: user.department.id },
+        where: { id: user.supervisesDepartment.id },
       });
 
       if ( !department ) return;
@@ -78,4 +78,17 @@ export class UsersGateway {
       this.server.to(`department_${department.id}`).emit("workers", workers);
     }
   }
+
+  async notifyOnUpdateWorker(updatedWorker: Partial<User>, departmentIds?: string[]) {
+    this.server.to("admins").emit("updateWorker", updatedWorker);
+
+    if (!departmentIds) return;
+
+    departmentIds.forEach(departmentId => {
+      if (departmentId) {
+        this.server.to(`department_${departmentId}`).emit("updateWorker", updatedWorker);
+      }
+    });
+  }
+
 }
