@@ -1,6 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateAssignmentDto } from './dto/create-assignment.dto';
-import { UpdateAssignmentDto } from './dto/update-assignment.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaginationDto } from '../common/dto/pagination.dto';
 

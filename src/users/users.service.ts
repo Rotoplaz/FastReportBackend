@@ -1,8 +1,6 @@
 import {
   Injectable,
   NotFoundException,
-  ConflictException,
-  InternalServerErrorException,
   BadRequestException,
   ForbiddenException,
   forwardRef,
@@ -29,7 +27,7 @@ export class UsersService {
 
   async create(createUserDto: CreateUserDto, user: User) {
     const hashPasword = bcrypt.hashSync(createUserDto.password, 10);
-    try {
+
       const newUser = await this.prisma.user.create({
         data: {
           ...createUserDto,
@@ -53,9 +51,7 @@ export class UsersService {
       this.usersGateway.notifyNewWorker(newUser, department?.id || "");
 
       return newUser;
-    } catch (error) {
-      this.handleErrors(error);
-    }
+
   }
 
   async findWorker(id: string) {
@@ -188,7 +184,7 @@ export class UsersService {
 
   async update(id: string, updateUserDto: UpdateUserDto, user: User) {
     const { departmentId, ...data } = updateUserDto;
-    try {
+
       const oldUser = await this.findWorker(id);
 
       const updatedUser = await this.prisma.user.update({
@@ -213,10 +209,7 @@ export class UsersService {
       ]);
 
       return updatedUser;
-    } catch (error) {
-      console.log(error);
-      this.handleErrors(error, id);
-    }
+
   }
 
   async updateUserRole(id: string, { role }: UpdateUserRoleDto, user: User) {
@@ -226,7 +219,6 @@ export class UsersService {
       );
     }
 
-    try {
       const userToUpdate = await this.prisma.user.findUnique({
         where: { id },
         include: {
@@ -257,25 +249,21 @@ export class UsersService {
 
       this.usersGateway.notifyOnUpdateWorker(updatedUser);
       return updatedUser;
-    } catch (error) {
-      throw new InternalServerErrorException();
-    }
+
   }
 
   async remove(id: string) {
-    try {
+
       await this.prisma.user.delete({
         where: { id },
       });
 
       return { message: `Usuario con ID ${id} eliminado correctamente` };
-    } catch (error) {
-      this.handleErrors(error, id);
-    }
+
   }
 
   async removeMany(ids: string[], user: User) {
-    try {
+
       const department = await this.prisma.department.findFirst({
         where: { supervisorId: user.id },
       });
@@ -294,13 +282,11 @@ export class UsersService {
       return {
         message: `${workers.length} trabajadores eliminados correctamente.`,
       };
-    } catch (error) {
-      return new InternalServerErrorException();
-    }
+    
   }
 
   async getUnassignedWorkersAndSupervisors() {
-    try {
+
       const workers = await this.prisma.user.findMany({
         where: {
           role: { in: ["worker", "supervisor"] },
@@ -327,9 +313,6 @@ export class UsersService {
       });
 
       return workers;
-    } catch (error) {
-      return new InternalServerErrorException();
-    }
   }
 
   handleErrors(error: any, id?: string) {
@@ -341,20 +324,6 @@ export class UsersService {
       }
     }
 
-    switch (error.code) {
-      case "P2002":
-        const target = error.meta?.target as string[];
 
-        if (target.includes("code")) {
-          throw new ConflictException("El código ya está en uso");
-        } else if (target.includes("email")) {
-          throw new ConflictException("El correo electrónico ya está en uso");
-        }
-      case "P2025":
-        throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
-
-      default:
-        throw new InternalServerErrorException();
-    }
   }
 }
