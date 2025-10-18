@@ -1,28 +1,35 @@
-import { IsEnum, IsNotEmpty, IsString, IsUUID } from 'class-validator';
-import { Priority, Status } from '@prisma/client';
+import {IsEnum, IsNotEmpty, IsString, IsUUID} from 'class-validator';
+import {Priority, Status} from '@prisma/client';
+import {ApiProperty} from "@nestjs/swagger";
 
 export class CreateReportDto {
-  @IsUUID()
-  @IsNotEmpty()
-  departmentId: string;
+    @ApiProperty()
+    @IsUUID()
+    @IsNotEmpty()
+    departmentId: string;
 
-  @IsString()
-  @IsNotEmpty()
-  title: string;
+    @ApiProperty()
+    @IsString()
+    @IsNotEmpty()
+    title: string;
 
-  @IsString()
-  @IsNotEmpty()
-  description: string;
+    @ApiProperty()
+    @IsString()
+    @IsNotEmpty()
+    description: string;
 
-  @IsEnum(Priority)
-  @IsNotEmpty()
-  priority: Priority;
+    @ApiProperty()
+    @IsEnum(Priority)
+    @IsNotEmpty()
+    priority: Priority;
 
-  @IsEnum(Status)
-  @IsNotEmpty()
-  status: Status;
+    @ApiProperty()
+    @IsEnum(Status)
+    @IsNotEmpty()
+    status: Status;
 
-  @IsString()
-  @IsNotEmpty()
-  location: string;
+    @ApiProperty()
+    @IsString()
+    @IsNotEmpty()
+    location: string;
 }
