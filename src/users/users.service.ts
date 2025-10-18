@@ -1,8 +1,6 @@
 import {
   Injectable,
   NotFoundException,
-  ConflictException,
-  InternalServerErrorException,
   BadRequestException,
   ForbiddenException,
   forwardRef,
@@ -17,6 +15,7 @@ import { FindUsersDto } from "./dto/find-users.dto";
 import { User, UserRole } from "@prisma/client";
 import { PaginationDto } from "../common/dto/pagination.dto";
 import { UsersGateway } from "./users.gateway";
+import { UpdateUserRoleDto } from "./dto/update-user-role";
 
 @Injectable()
 export class UsersService {
@@ -28,7 +27,7 @@ export class UsersService {
 
   async create(createUserDto: CreateUserDto, user: User) {
     const hashPasword = bcrypt.hashSync(createUserDto.password, 10);
-    try {
+
       const newUser = await this.prisma.user.create({
         data: {
           ...createUserDto,
@@ -52,10 +51,38 @@ export class UsersService {
       this.usersGateway.notifyNewWorker(newUser, department?.id || "");
 
       return newUser;
-    } catch (error) {
-      this.handleErrors(error);
-    }
+
   }
+
+  async findWorker(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        code: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+        workerDepartment: true,
+        supervisesDepartment: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
+    }
+
+    return user;
+  }
+
   async getWorkersByDepartment(
     departmentId: string,
     paginationDto: PaginationDto
@@ -64,11 +91,10 @@ export class UsersService {
 
     const where = {
       role: UserRole.worker,
-      departmentId,
     };
 
     const workers = await this.prisma.user.findMany({
-      where,
+      where: { ...where, workerDepartmentId: departmentId },
       take: limit,
       skip: limit * (page - 1),
       select: {
@@ -156,33 +182,88 @@ export class UsersService {
     return user;
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto) {
-    try {
-      const { password, ...updatedUser } = await this.prisma.user.update({
+  async update(id: string, updateUserDto: UpdateUserDto, user: User) {
+    const { departmentId, ...data } = updateUserDto;
+
+      const oldUser = await this.findWorker(id);
+
+      const updatedUser = await this.prisma.user.update({
         where: { id },
-        data: updateUserDto,
+        data: { ...data, workerDepartmentId: departmentId },
+        include: {
+          supervisesDepartment: true,
+          workerDepartment: true,
+        },
+        omit: {
+          workerDepartmentId: true,
+          password: true,
+        },
       });
 
+      const oldDepartmentId = oldUser.workerDepartment?.id || "";
+      const newDepartmentId = updatedUser.workerDepartment?.id || "";
+
+      this.usersGateway.notifyOnUpdateWorker(updatedUser, [
+        oldDepartmentId,
+        newDepartmentId,
+      ]);
+
       return updatedUser;
-    } catch (error) {
-      this.handleErrors(error, id);
+
+  }
+
+  async updateUserRole(id: string, { role }: UpdateUserRoleDto, user: User) {
+    if (user.role !== UserRole.admin) {
+      throw new ForbiddenException(
+        "No tienes permisos para cambiar roles de usuario."
+      );
     }
+
+      const userToUpdate = await this.prisma.user.findUnique({
+        where: { id },
+        include: {
+          supervisesDepartment: true,
+        },
+      });
+
+      if (!userToUpdate) {
+        throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
+      }
+
+      if (userToUpdate.supervisesDepartment) {
+        await this.prisma.department.update({
+          where: { id: userToUpdate.supervisesDepartment.id },
+          data: { supervisorId: null },
+        });
+      }
+
+      const updatedUser = await this.prisma.user.update({
+        where: { id },
+        data: {
+          role,
+          workerDepartmentId: null,
+        },
+        omit: { password: true },
+      });
+
+
+      this.usersGateway.notifyOnUpdateWorker(updatedUser);
+      return updatedUser;
+
   }
 
   async remove(id: string) {
-    try {
+
       await this.prisma.user.delete({
         where: { id },
       });
 
       return { message: `Usuario con ID ${id} eliminado correctamente` };
-    } catch (error) {
-      this.handleErrors(error, id);
-    }
+
   }
 
   async removeMany(ids: string[], user: User) {
-    try {
+
       const department = await this.prisma.department.findFirst({
         where: { supervisorId: user.id },
       });
@@ -201,31 +282,37 @@ export class UsersService {
       return {
         message: `${workers.length} trabajadores eliminados correctamente.`,
       };
-    } catch (error) {
-      return new InternalServerErrorException();
-    }
+    
   }
 
   async getUnassignedWorkersAndSupervisors() {
-    try {
+
       const workers = await this.prisma.user.findMany({
         where: {
           role: { in: ["worker", "supervisor"] },
-          workerDepartmentId: null, 
-          supervisesDepartment: null
+          workerDepartmentId: null,
+          supervisesDepartment: null,
         },
         select: {
+          id: true,
           firstName: true,
           lastName: true,
+          email: true,
+          code: true,
           role: true,
-          id: true
-        }
+          createdAt: true,
+          updatedAt: true,
+          workerDepartment: true,
+          supervisesDepartment: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
       });
 
       return workers;
-    } catch (error) {
-      return new InternalServerErrorException();
-    }
   }
 
   handleErrors(error: any, id?: string) {
@@ -237,20 +324,6 @@ export class UsersService {
       }
     }
 
-    switch (error.code) {
-      case "P2002":
-        const target = error.meta?.target as string[];
 
-        if (target.includes("code")) {
-          throw new ConflictException("El código ya está en uso");
-        } else if (target.includes("email")) {
-          throw new ConflictException("El correo electrónico ya está en uso");
-        }
-      case "P2025":
-        throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
-
-      default:
-        throw new InternalServerErrorException();
-    }
   }
 }

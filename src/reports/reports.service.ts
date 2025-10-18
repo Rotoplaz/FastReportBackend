@@ -1,8 +1,6 @@
 import {
   Injectable,
   NotFoundException,
-  ConflictException,
-  InternalServerErrorException,
   BadRequestException,
   ForbiddenException,
   Inject,
@@ -11,7 +9,6 @@ import {
 import { CreateReportDto } from "./dto/create-report.dto";
 import { UpdateReportDto } from "./dto/update-report.dto";
 import { PrismaService } from "../prisma/prisma.service";
-import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { ImagesService } from "src/images/images.service";
 import { ReportsGateway } from "./reports.gateway";
 import { User } from "@prisma/client";
@@ -34,77 +31,10 @@ export class ReportsService {
     user: User,
     files?: Express.Multer.File[]
   ) {
-    try {
-      await this.departmentsService.findOne(createReportDto.departmentId);
+    await this.departmentsService.findOne(createReportDto.departmentId);
 
-      const newReport = await this.prisma.report.create({
-        data: { ...createReportDto, studentId: user.id  },
-        include: {
-          student: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-              role: true,
-            },
-          },
-          department: {
-            select: {
-              id: true,
-              name: true,
-              description: true,
-            },
-          },
-        },
-      });
-
-      if (!files) {
-        return newReport;
-      }
-
-      const images = await this.imagesService.createReportImages(
-        newReport.id,
-        files
-      );
-
-      const reportWithImages = {
-        ...newReport,
-        images,
-      };
-
-      this.reportsGateway.notifyNewReport(reportWithImages);
-      return reportWithImages;
-    } catch (error) {
-      console.log(error);
-      this.handleErrors(error);
-    }
-  }
-
-  async findAll(findReportsDto: FindReportsDto, user: User) {
-    const { limit, page, status, ...date } = findReportsDto;
-
-    if (page <= 0) {
-      throw new BadRequestException("El parametro page debe ser mayor a 0");
-    }
-
-    const dateFilter = dateQueryBuilder(date);
-
-    let departmentFilter = {};
-    if (user.role === "supervisor") {
-      const supervisorDepartment = await this.prisma.department.findFirst({
-        where: { supervisorId: user.id },
-      });
-      departmentFilter = { departmentId: supervisorDepartment?.id };
-    }
-
-
-    const totalCount = await this.prisma.report.count({
-      where: { ...dateFilter, status, ...departmentFilter },
-    });
-
-    const reports = await this.prisma.report.findMany({
-      where: { ...dateFilter, status, ...departmentFilter },
+    const newReport = await this.prisma.report.create({
+      data: { ...createReportDto, studentId: user.id },
       include: {
         student: {
           select: {
@@ -122,26 +52,98 @@ export class ReportsService {
             description: true,
           },
         },
-        images: {
-          select: {
-            url: true,
-            id: true,
-          },
-        },
       },
-      take: limit,
-      skip: limit * (page - 1),
     });
 
-    return {
-      limit,
-      page,
-      numberOfPages: Math.ceil(totalCount / limit),
-      count: totalCount,
-      data: reports,
+    if (!files) {
+      return newReport;
+    }
+
+    const images = await this.imagesService.createReportImages(
+      newReport.id,
+      files
+    );
+
+    const reportWithImages = {
+      ...newReport,
+      images,
     };
+
+    this.reportsGateway.notifyNewReport(reportWithImages);
+    return reportWithImages;
   }
 
+    async findAll(findReportsDto: FindReportsDto, user: User) {
+        const { limit, page, status, ...date } = findReportsDto;
+
+        if (page <= 0) {
+            throw new BadRequestException("El parametro page debe ser mayor a 0");
+        }
+
+        const dateFilter = dateQueryBuilder(date);
+
+
+        let departmentFilter = {};
+
+        if (user.role === "supervisor") {
+            const supervisorDepartment = await this.prisma.department.findFirst({
+                where: { supervisorId: user.id },
+            });
+
+            if (supervisorDepartment) {
+                departmentFilter = { departmentId: supervisorDepartment.id };
+            }
+        }
+
+        const whereClause =
+            user.role === "supervisor"
+                ? { ...dateFilter, status, ...departmentFilter }
+                : { ...dateFilter, status };
+
+        const totalCount = await this.prisma.report.count({
+            where: whereClause,
+        });
+
+        const reports = await this.prisma.report.findMany({
+            where: whereClause,
+            include: {
+                student: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                        role: true,
+                    },
+                },
+                department: {
+                    select: {
+                        id: true,
+                        name: true,
+                        description: true,
+                    },
+                },
+                images: {
+                    select: {
+                        url: true,
+                        id: true,
+                    },
+                },
+            },
+            take: limit,
+            skip: limit * (page - 1),
+        });
+
+        return {
+            data: reports,
+            pagination: {
+                total: totalCount,
+                page,
+                limit,
+                totalPages: Math.ceil(totalCount / limit),
+            },
+        };
+    }
   async findOne(id: string) {
     const report = await this.prisma.report.findUnique({
       where: { id },
@@ -188,77 +190,72 @@ export class ReportsService {
   }
 
   async update(id: string, updateReportDto: UpdateReportDto, user: any) {
-    try {
-      const isAdmin = user.role === "admin";
+    const isAdmin = user.role === "admin";
 
-      if (!isAdmin) {
-        const report = await this.findOne(id);
+    if (!isAdmin) {
+      const report = await this.findOne(id);
 
-        if (report.studentId !== user.id) {
-          throw new ForbiddenException(
-            "No tienes permiso para actualizar este reporte. Solo el creador del reporte puede actualizarlo."
-          );
-        }
+      if (report.studentId !== user.id) {
+        throw new ForbiddenException(
+          "No tienes permiso para actualizar este reporte. Solo el creador del reporte puede actualizarlo."
+        );
       }
+    }
 
-      const updatedReport = await this.prisma.report.update({
-        where: { id },
-        data: updateReportDto,
-        include: {
-          student: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-              role: true,
-            },
+    const updatedReport = await this.prisma.report.update({
+      where: { id },
+      data: updateReportDto,
+      include: {
+        student: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            role: true,
           },
-          department: {
-            select: {
-              id: true,
-              name: true,
-              description: true,
-              supervisor: {
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true,
-                  email: true,
-                  role: true,
-                },
+        },
+        department: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            supervisor: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                role: true,
               },
             },
           },
         },
-      });
+      },
+    });
 
-      return updatedReport;
-    } catch (error) {
-      console.log(error);
-      this.handleErrors(error, id);
-    }
+    return updatedReport;
   }
 
   async remove(id: string, user: User) {
-    try {
-      await this.prisma.report.delete({
-        where: { id },
-      });
+    await this.prisma.report.delete({
+      where: { id },
+    });
 
-      await this.imagesService.deleteFolderWithImages(id, user);
+    await this.imagesService.deleteFolderWithImages(id, user);
 
-      return { message: `Reporte con ID ${id} eliminado correctamente` };
-    } catch (error) {
-      this.handleErrors(error, id);
-    }
+    return { message: `Reporte con ID ${id} eliminado correctamente` };
   }
 
   async getDepartmentMetrics(departmentId: string) {
     try {
-      const department = await this.prisma.department.findFirst({where: { id: departmentId } });
-      
-      const totalReportsPromise = this.prisma.report.count({ where: {departmentId: department?.id} });
+      const department = await this.prisma.department.findFirst({
+        where: { id: departmentId },
+      });
+
+      const totalReportsPromise = this.prisma.report.count({
+        where: { departmentId: department?.id },
+      });
 
       const reportsCompletedPromise = this.prisma.report.count({
         where: { status: "completed", departmentId: department?.id },
@@ -307,32 +304,30 @@ export class ReportsService {
         mediumPriorityReports,
       };
     } catch (error) {
-      console.error("Error fetching metrics:", error);
-
       throw new BadRequestException();
     }
   }
 
-    async getGlobalMetrics() {
+  async getGlobalMetrics() {
     try {
       const totalReportsPromise = this.prisma.report.count();
       const reportsCompletedPromise = this.prisma.report.count({
-        where: { status: "completed", },
+        where: { status: "completed" },
       });
       const reportsPendingPromise = this.prisma.report.count({
-        where: { status: "pending", },
+        where: { status: "pending" },
       });
       const reportsInProgressPromise = this.prisma.report.count({
-        where: { status: "in_progress", },
+        where: { status: "in_progress" },
       });
       const highPriorityReportsPromise = this.prisma.report.count({
-        where: { priority: "high", },
+        where: { priority: "high" },
       });
       const lowPriorityReportsPromise = this.prisma.report.count({
-        where: { priority: "low", },
+        where: { priority: "low" },
       });
       const mediumPriorityReportsPromise = this.prisma.report.count({
-        where: { priority: "medium", },
+        where: { priority: "medium" },
       });
 
       const [
@@ -363,36 +358,7 @@ export class ReportsService {
         mediumPriorityReports,
       };
     } catch (error) {
-      console.error("Error fetching metrics:", error);
-
       throw new BadRequestException();
-    }
-  }
-
-
-  handleErrors(error: any, id?: string) {
-    if (!(error instanceof PrismaClientKnownRequestError)) {
-      if (error.message.includes("Argument `data` is missing.")) {
-        throw new BadRequestException(
-          "El cuerpo de la solicitud no puede estar vacío"
-        );
-      }
-      throw error;
-    }
-
-    switch (error.code) {
-      case "P2025":
-        throw new NotFoundException(`Reporte con ID ${id} no encontrado`);
-      case "P2003":
-        const target = error.meta?.target as string;
-        if (target.includes("studentId")) {
-          throw new ConflictException("El estudiante especificado no existe");
-        } else if (target.includes("categoryId")) {
-          throw new ConflictException("La categoría especificada no existe");
-        }
-        break;
-      default:
-        throw new InternalServerErrorException();
     }
   }
 }

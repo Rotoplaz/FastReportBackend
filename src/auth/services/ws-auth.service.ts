@@ -25,7 +25,6 @@ export class WsAuthService {
     });
 
     if (!user) throw new Error("Usuario no encontrado en DB");
-
     client.data.user = user;
     client.emit("authenticated");
 

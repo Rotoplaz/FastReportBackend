@@ -45,7 +45,6 @@ export class CloudinaryService {
       const result = await cloudinary.uploader.destroy(publicId);
       return result.result === 'ok';
     } catch (error) {
-      console.error('Error deleting image from Cloudinary:', error);
       return false;
     }
   }
@@ -58,7 +57,6 @@ export class CloudinaryService {
       await cloudinary.api.delete_folder(`reports/${folderName}`);
       return result;
     } catch (error) {
-      console.error('Error deleting folder with images from Cloudinary:', error);
       throw new InternalServerErrorException();
     }
   }
