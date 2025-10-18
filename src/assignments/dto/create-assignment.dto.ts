@@ -1,13 +1,16 @@
-import { IsArray, IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import {IsArray, IsNotEmpty, IsString, IsUUID} from 'class-validator';
+import {ApiProperty} from "@nestjs/swagger";
 
 export class CreateAssignmentDto {
-  @IsNotEmpty()
-  @IsString()
-  @IsUUID()
-  reportId: string;
+    @ApiProperty()
+    @IsNotEmpty()
+    @IsString()
+    @IsUUID()
+    reportId: string;
 
-  @IsArray()
-  @IsString({ each: true })
-  @IsUUID('4', { each: true })
-  workerIds: string[];
+    @ApiProperty()
+    @IsArray()
+    @IsString({each: true})
+    @IsUUID('4', {each: true})
+    workerIds: string[];
 }
