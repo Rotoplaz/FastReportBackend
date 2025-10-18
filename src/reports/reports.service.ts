@@ -73,66 +73,77 @@ export class ReportsService {
     return reportWithImages;
   }
 
-  async findAll(findReportsDto: FindReportsDto, user: User) {
-    const { limit, page, status, ...date } = findReportsDto;
+    async findAll(findReportsDto: FindReportsDto, user: User) {
+        const { limit, page, status, ...date } = findReportsDto;
 
-    if (page <= 0) {
-      throw new BadRequestException("El parametro page debe ser mayor a 0");
+        if (page <= 0) {
+            throw new BadRequestException("El parametro page debe ser mayor a 0");
+        }
+
+        const dateFilter = dateQueryBuilder(date);
+
+
+        let departmentFilter = {};
+
+        if (user.role === "supervisor") {
+            const supervisorDepartment = await this.prisma.department.findFirst({
+                where: { supervisorId: user.id },
+            });
+
+            if (supervisorDepartment) {
+                departmentFilter = { departmentId: supervisorDepartment.id };
+            }
+        }
+
+        const whereClause =
+            user.role === "supervisor"
+                ? { ...dateFilter, status, ...departmentFilter }
+                : { ...dateFilter, status };
+
+        const totalCount = await this.prisma.report.count({
+            where: whereClause,
+        });
+
+        const reports = await this.prisma.report.findMany({
+            where: whereClause,
+            include: {
+                student: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                        role: true,
+                    },
+                },
+                department: {
+                    select: {
+                        id: true,
+                        name: true,
+                        description: true,
+                    },
+                },
+                images: {
+                    select: {
+                        url: true,
+                        id: true,
+                    },
+                },
+            },
+            take: limit,
+            skip: limit * (page - 1),
+        });
+
+        return {
+            data: reports,
+            pagination: {
+                total: totalCount,
+                page,
+                limit,
+                totalPages: Math.ceil(totalCount / limit),
+            },
+        };
     }
-
-    const dateFilter = dateQueryBuilder(date);
-
-    let departmentFilter = {};
-    if (user.role === "supervisor") {
-      const supervisorDepartment = await this.prisma.department.findFirst({
-        where: { supervisorId: user.id },
-      });
-      departmentFilter = { departmentId: supervisorDepartment?.id };
-    }
-
-    const totalCount = await this.prisma.report.count({
-      where: { ...dateFilter, status, ...departmentFilter },
-    });
-
-    const reports = await this.prisma.report.findMany({
-      where: { ...dateFilter, status, ...departmentFilter },
-      include: {
-        student: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            role: true,
-          },
-        },
-        department: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-          },
-        },
-        images: {
-          select: {
-            url: true,
-            id: true,
-          },
-        },
-      },
-      take: limit,
-      skip: limit * (page - 1),
-    });
-
-    return {
-      limit,
-      page,
-      numberOfPages: Math.ceil(totalCount / limit),
-      count: totalCount,
-      data: reports,
-    };
-  }
-
   async findOne(id: string) {
     const report = await this.prisma.report.findUnique({
       where: { id },
