@@ -1,15 +1,25 @@
-
 services:
-
   db:
+    container_name: reports-db
     image: postgres
     restart: always
     ports:
-      - 5432:5432
-    # volumes:
-    #   - ./postgres:/var/lib/postgresql/data
+      - "5432:5432"
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+
+  api:
+    container_name: nest-api
+    image: fastreport-api
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    env_file:
+      - .env.prod
+    environment:
+      NODE_ENV: ${ENV}
 
