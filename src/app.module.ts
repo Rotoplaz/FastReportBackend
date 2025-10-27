@@ -11,6 +11,7 @@ import { AssignmentsModule } from './assignments/assignments.module';
 import { ImagesModule } from './images/images.module';
 import { EvidencesModule } from './evidences/evidences.module';
 import { SeedModule } from './seed/seed.module';
+import { WorkersModule } from './workers/workers.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { SeedModule } from './seed/seed.module';
     ImagesModule,
     EvidencesModule,
     SeedModule,
+    WorkersModule,
   ],
   controllers: [],
   providers: [],

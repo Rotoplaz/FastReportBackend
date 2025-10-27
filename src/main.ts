@@ -4,6 +4,12 @@ import {ValidationPipe} from "@nestjs/common";
 import {DocumentBuilder, SwaggerModule} from "@nestjs/swagger";
 import {PrismaClientExceptionFilter} from "./common/filters/prisma-exception.filter";
 
+// TODO: Aplicar patrones para mejorar el código (Repository, Domain Services / Use Cases, CQRS).
+// TODO: Quitar o redefinir la relación de las asignaciones (reporte -> asignaciones -> muchos trabajadores).
+// TODO: Mover la lógica de trabajadores fuera del módulo de usuarios.
+// TODO: Configurar n8n para manejar embeddings y mejorar la respuesta del chatbot.
+
+
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
     app.enableCors({

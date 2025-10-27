@@ -1,5 +1,7 @@
 prisma/*.db*
 
+ollama_data/
+
 postgres
 
 # compiled output
