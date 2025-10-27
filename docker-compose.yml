@@ -1,15 +1,61 @@
-
 services:
-
   db:
-    image: postgres
+    container_name: reports-db
+    image: postgres:15
     restart: always
     ports:
-      - 5432:5432
-    # volumes:
-    #   - ./postgres:/var/lib/postgresql/data
+      - "5432:5432"
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
 
+
+  api:
+    container_name: nest-api
+    image: fastreport-api
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: ${ENV}
+
+  n8n:
+    container_name: n8n
+    image: docker.n8n.io/n8nio/n8n:latest
+    restart: always
+    ports:
+      - "5678:5678"
+    depends_on:
+      - db
+    volumes:
+      - /n8n_data:/home/node/.n8n
+
+  ollama:
+    container_name: ollama
+    image: ollama/ollama:latest
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_KEEP_ALIVE=-1
+      - OLLAMA_NO_TEMPERATURE=1
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    networks:
+      - default
+
+volumes:
+  n8n_data:
+  ollama_data:

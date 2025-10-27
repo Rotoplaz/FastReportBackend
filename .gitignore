@@ -1,5 +1,7 @@
 prisma/*.db*
 
+ollama_data/
+
 postgres
 
 # compiled output
@@ -40,6 +42,7 @@ lerna-debug.log*
 !.vscode/extensions.json
 
 # dotenv environment variable files
+.env.prod
 .env
 .env.development.local
 .env.test.local
